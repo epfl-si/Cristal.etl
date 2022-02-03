@@ -27,7 +27,7 @@ write_archibus <- function(data, filename) {
     xlsx.addLineBreak(sheet, 3)
 
     # Add table : add a data frame
-    xlsx.addTable(wb, sheet, data, startCol=1)
+    xlsx.addTable(wb, sheet, data.frame(data), startCol = 1, row.names = FALSE)
     xlsx.addLineBreak(sheet, 2)
 
     # save the workbook to an Excel file
