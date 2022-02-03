@@ -1,8 +1,25 @@
 #install.packages("tidyverse")
 #install.packages("readxl")
 #install.packages("xlsx")
+#install.packages("cellranger")
 library(tidyverse)
 library(readxl)
+
+A1 <- function(row, col) {
+    #' Convert real-world (integer) coordinates to Excel®-style A1 notation.
+    dollar_a1 <-
+        cellranger::ra_ref(row_ref = row, col_ref = col) %>%
+        cellranger::to_string(fo = "A1")
+    str_replace_all(dollar_a1, '[$]', '')
+}
+stopifnot(A1(20, 27) == "AA20")
+
+A1.range <- function(from_row, from_col, to_row, to_col) {
+    paste(
+        A1(from_row, from_col),
+        A1(to_row, to_col),
+        sep = ":")
+}
 
 write_archibus <- function(data, filename, table.header) {
     wb <- xlsx::createWorkbook(type="xlsx")
@@ -21,6 +38,8 @@ write_archibus <- function(data, filename, table.header) {
                            xlsx::Font(wb, isBold = TRUE) +
                            xlsx::Border(color = "black", position = c("TOP", "BOTTOM"),
                                         pen = c("BORDER_THIN", "BORDER_THICK")))
+
+    xlsx::addAutoFilter(sheet, A1.range(2, 1, 2, ncol(data)))
 
     # save the workbook to an Excel file
     xlsx::saveWorkbook(wb, filename)
