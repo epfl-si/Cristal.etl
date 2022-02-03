@@ -21,10 +21,9 @@ A1.range <- function(from_row, from_col, to_row, to_col) {
         sep = ":")
 }
 
-write_archibus <- function(data, filename, table.header) {
-    wb <- xlsx::createWorkbook(type="xlsx")
-    # Create a sheet in that workbook to contain the data table
-    sheet <- xlsx::createSheet(wb, sheetName = "4d_projetcts")
+write_archibus <- function(data, filename, table.header, sheet.name = "sheet1") {
+    wb <- xlsx::createWorkbook(type = "xlsx")
+    sheet <- xlsx::createSheet(wb, sheetName = sheet.name)
 
     # Add Archibus-style header
     cell <- xlsx::createCell(xlsx::createRow(sheet, rowIndex = 1), colIndex = 1)
@@ -62,6 +61,6 @@ mission_archibus <-
             description = "",
             status = toArchibusStatus(EtatMission))  
   
-  
 write_archibus(mission_archibus, "./missions-archibus.xlsx",
-               table.header = "Activity Projects")
+               table.header = "Activity Projects",
+               sheet.name = "4d_projects")
