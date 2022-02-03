@@ -1,37 +1,29 @@
 #install.packages("tidyverse")
 #install.packages("readxl")
-
-#install.packages("devtools")
-#devtools::install_github("kassambara/r2excel")
+#install.packages("xlsx")
 library(tidyverse)
 library(readxl)
-#library(xlsx)
-library(r2excel)
 
-write_archibus <- function(data, filename) {
-    wb <- createWorkbook(type="xlsx")
+write_archibus <- function(data, filename, table.header) {
+    wb <- xlsx::createWorkbook(type="xlsx")
     # Create a sheet in that workbook to contain the data table
-    sheet <- createSheet(wb, sheetName = "4d_projetcts")
+    sheet <- xlsx::createSheet(wb, sheetName = "4d_projetcts")
 
-    # Add header. TODO: respect expectations of Archibus import module
-    xlsx.addHeader(wb, sheet, value="Add table",level=1, 
-               color="black", underline=1)
-    xlsx.addLineBreak(sheet, 1)
+    # Add Archibus-style header
+    cell <- xlsx::createCell(xlsx::createRow(sheet, rowIndex = 1), colIndex = 1)
+    xlsx::setCellValue(cell[[1,1]], paste("#", table.header, sep = ""))
+    xlsx::setCellStyle(cell[[1,1]],
+                       xlsx::CellStyle(wb) + xlsx::Font(wb, heightInPoints=22, isBold=TRUE))
 
-    # Add paragraph : Author
-    author=paste("Author : Alboukadel KASSAMBARA. \n",
-                 "@:alboukadel.kassambara@gmail.com.",
-                 "\n Website : http://ww.sthda.com", sep="")
-    xlsx.addParagraph(wb, sheet,value=author, isItalic=TRUE, colSpan=5, 
-                      rowSpan=4, fontColor="darkgray", fontSize=14)
-    xlsx.addLineBreak(sheet, 3)
-
-    # Add table : add a data frame
-    xlsx.addTable(wb, sheet, data.frame(data), startCol = 1, row.names = FALSE)
-    xlsx.addLineBreak(sheet, 2)
+    xlsx::addDataFrame(data.frame(data), sheet,
+                       startRow = 2, row.names = FALSE,
+                       colnamesStyle = xlsx::CellStyle(wb) +
+                           xlsx::Font(wb, isBold = TRUE) +
+                           xlsx::Border(color = "black", position = c("TOP", "BOTTOM"),
+                                        pen = c("BORDER_THIN", "BORDER_THICK")))
 
     # save the workbook to an Excel file
-    saveWorkbook(wb, filename)
+    xlsx::saveWorkbook(wb, filename)
 }
 
 toArchibusStatus <- function(etat) {
@@ -52,7 +44,5 @@ mission_archibus <-
             status = toArchibusStatus(EtatMission))  
   
   
-# Décommentr la fin pour produire un .xslx (pas nécessaire dans R studio) :
-# write_archibus(mission_archibus, "./missions-archibus.xlsx")
-
-
+write_archibus(mission_archibus, "./missions-archibus.xlsx",
+               table.header = "Activity Projects")
