@@ -15,7 +15,7 @@ write_archibus <- function(data, filename, table.header) {
     xlsx::setCellStyle(cell[[1,1]],
                        xlsx::CellStyle(wb) + xlsx::Font(wb, heightInPoints=22, isBold=TRUE))
 
-    xlsx::addDataFrame(data.frame(data), sheet,
+    xlsx::addDataFrame(data.frame(data, check.names = FALSE), sheet,
                        startRow = 2, row.names = FALSE,
                        colnamesStyle = xlsx::CellStyle(wb) +
                            xlsx::Font(wb, isBold = TRUE) +
