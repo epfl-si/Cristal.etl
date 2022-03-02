@@ -61,7 +61,8 @@ mission_archibus <-
             project_name = Intitule,
             project_type = PriorisationType, #attention il faudra mettre les ids
             description = "",
-            status = toArchibusStatus(EtatMission))  
+            status = toArchibusStatus(EtatMission),
+            criticality = "1") # à définir valeur par défaut
   
 write_archibus(mission_archibus, "./missions-archibus.xlsx",
                table.header = "Activity Projects",
