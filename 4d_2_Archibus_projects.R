@@ -51,6 +51,11 @@ toArchibusStatus <- function(etat) {
               TRUE              ~ 7)
 }
 
+toArchibusBat <- function(batId) {
+    # si bat est ZZ alors transormer en ZE
+    case_when(batId == "ZZ" ~ "ZE",
+              TRUE          ~ batId)
+}
 
 
 mission_import <- read_excel("./MISSIONS_Export-direct_table.xlsx")
@@ -62,7 +67,9 @@ mission_archibus <-
             project_type = PriorisationType, #attention il faudra mettre les ids
             description = "",
             status = toArchibusStatus(EtatMission),
-            criticality = "1") # à définir valeur par défaut
+            criticality = 3, # à définir valeur par défaut
+            site_id = "",
+            bl_id = toArchibusBat(BatimentID)) 
   
 write_archibus(mission_archibus, "./missions-archibus.xlsx",
                table.header = "Activity Projects",
