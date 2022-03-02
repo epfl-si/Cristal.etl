@@ -51,16 +51,19 @@ toArchibusStatus <- function(etat) {
               TRUE              ~ 7)
 }
 
-mission_import <- read_excel("/Users/venries/Downloads/MISSIONS_Export-direct_table.xlsx")
+
+
+mission_import <- read_excel("./MISSIONS_Export-direct_table.xlsx")
 
 mission_archibus <-
   mission_import %>%
   transmute("#project.project_id" = IDMission,
             project_name = Intitule,
-            project_type = PriorisationType,
+            project_type = PriorisationType, #attention il faudra mettre les ids
             description = "",
             status = toArchibusStatus(EtatMission))  
   
 write_archibus(mission_archibus, "./missions-archibus.xlsx",
                table.header = "Activity Projects",
                sheet.name = "4d_projects")
+
