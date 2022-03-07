@@ -4,6 +4,7 @@
 #install.packages("cellranger")
 library(tidyverse)
 library(readxl)
+library(dplyr)
 
 A1 <- function(row, col) {
     #' Convert real-world (integer) coordinates to Excel®-style A1 notation.
@@ -45,10 +46,14 @@ write_archibus <- function(data, filename, table.header, sheet.name = "sheet1") 
 }
 
 toArchibusStatus <- function(etat) {
-    # Juste pour montrer comment on fait — En attente des codes de la part de Thomas :
-    case_when(etat == "Terminé" ~ 1,
-              etat == "Etude"   ~ 2,
-              TRUE              ~ 7)
+
+    case_when(etat == "Terminé"   ~ "Completed-Verified",
+              etat == "Etude"     ~ "Approved-In Design",
+              etat == "Exécution" ~ "Issued-In Process",
+              etat == "Annulé"    ~ "Approved-Cancelled",
+              etat == "Faux"      ~ "Issued-On Hold",
+              etat == ""          ~ "Issued-On Hold",
+              TRUE                ~ "")
 }
 
 toArchibusBat <- function(batId) {
@@ -57,11 +62,26 @@ toArchibusBat <- function(batId) {
               TRUE          ~ batId)
 }
 
+toArchibusCF4 <- function(cf4Id) {
+    case_when(cf4Id == 0 ~ "")
+    read.csv("./organisation.txt",header = T, sep = ";",check.names = F)
+             
+}
 
-mission_import <- read_excel("./MISSIONS_Export-direct_table.xlsx")
+
+mission_import <-read_excel("./4DMissions_03.03.22.xlsx")
+cf_import <- read.csv("./organisation.txt",header = T, sep = ";",check.names = F, fileEncoding = "latin1") %>%
+   rename(CFNo = `No unité`) %>%
+   separate(Hiérarchie, sep = " ", fill = "right", into = c(NA, "CF2", NA, NA, NA))
+
+cf <- cf_import %>%
+  filter(Au == "")  ## Seulement la dernière identité de l'unité;
+                    ## N.B.: cela oblige Archibus à mettre à jour cette donnée
+                    ## avant l'import (s'assurer que c'est le cas !)
 
 mission_archibus <-
   mission_import %>%
+  left_join(cf) %>%
   transmute("#project.project_id" = IDMission,
             project_name = Intitule,
             project_type = PriorisationType, #attention il faudra mettre les ids
@@ -69,7 +89,9 @@ mission_archibus <-
             status = toArchibusStatus(EtatMission),
             criticality = 3, # à définir valeur par défaut
             site_id = "",
-            bl_id = toArchibusBat(BatimentID)) 
+            bl_id = toArchibusBat(BatimentID),
+            dv_id = CF2,
+            dp_id =  Sigle) 
   
 write_archibus(mission_archibus, "./missions-archibus.xlsx",
                table.header = "Activity Projects",
