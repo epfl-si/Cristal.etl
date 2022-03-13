@@ -101,8 +101,9 @@ cha_equip_acc0 <- read_excel("./4D_GMAO_Accessoires_avec UUID_4-3-22.xlsx", "C_a
 cha_equip_acc0$eq_id <-paste("CHA-00000-",formatC(seq.int(nrow(cha_equip_acc0)) + nrow(cha_equip0), width=6, flag=0, format="d"), sep = "")
 
 cha_equip_acc <- cha_equip_acc0 %>%
-  left_join(cha_equip_parent, by=c("IDFiche"="asset_id")) %>%
-  transmute("#eq.eq_id" = eq_id,
+  left_join(cha_equip_parent, by=c("IDFiche"="asset_id"),) %>%
+  transmute(subcomponent_of = `#eq.eq_id`,
+            "#eq.eq_id" = eq_id,
             eq_std = "ACCESSOIRE",
             bl_id = bl_id,
             fl_id = fl_id,
@@ -113,7 +114,6 @@ cha_equip_acc <- cha_equip_acc0 %>%
             dp_id = "0047",
             num_serial = IDNo,
             modelno = Numero,
-            subcomponent_of = `#eq.eq_id`,
             mfr = Marque,
             asset_id = paste("CHA-",UUID, sep =""),
             status = "",
@@ -162,7 +162,8 @@ ven_equip_acc0$eq_id <-paste("VEN-00000-",formatC(seq.int(nrow(ven_equip_acc0)) 
 
 ven_equip_acc <- ven_equip_acc0 %>%
   left_join(ven_equip_parent, by=c("IDFiche"="asset_id")) %>%
-  transmute("#eq.eq_id" = eq_id,
+  transmute(subcomponent_of = `#eq.eq_id`,
+            "#eq.eq_id" = eq_id,
             eq_std = "ACCESSOIRE",
             bl_id = bl_id,
             fl_id = fl_id,
@@ -172,7 +173,6 @@ ven_equip_acc <- ven_equip_acc0 %>%
             dv_id = 11500,
             dp_id = "0047",
             num_serial = IDNo,
-            subcomponent_of = `#eq.eq_id`,
             mfr = "",
             asset_id = paste("VEN-",UUID, sep =""),
             status = "",
@@ -195,6 +195,7 @@ ass_attrib[nrow(ass_attrib)+1,] <- c("LIEU","Lieu","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("TYPE","type","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("DIAMETRE","Diametre","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("VALEURHORAIRE","Valeur horaire","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("INSTALLATION","Installation","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("MONOBLOCTYPE","Monobloc type","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("MONOBLOCNO","Monobloc no","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("DEBITAIR","Débit d'air","","Equipment")
@@ -217,13 +218,43 @@ ass_attrib[nrow(ass_attrib)+1,] <- c("PRISEAIREDERNIERNET","Prise Aire Dernier n
 ass_attrib[nrow(ass_attrib)+1,] <- c("CLIMATISEURARMOIRE","Climatiseur Armoire Marque type","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("RACCORDEMENT","Raccordement","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("FICHETECHNIQUE","Fiche technique","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("IDCONTRAT","ID contrat","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("DIMENSION","Dimension","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("DIAMETRERACCORDEMENT","Diametre raccordement","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("VitesseAirPrevue","Vitesse air prévue","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("VitesseAirMesuree","Vitesse air mesurée","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("MANOMETREPOSEOUI","Manometre pose oui","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("MANOMETREPRESSION","Manometre pression","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("GUILLOTINECHAPELLE","Guillotine chapelle","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("HORLOGEPVGVOUI","Horloge PVGV oui","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("FORSAGEGVOUI","Forsage GV oui","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("ELEMPVOUI","Elem PV oui","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("ELEMGVOUI","Elem GV oui","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("ELEMAUTOOUI","Elem AUTO oui","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("ELEMHORSOUI","Elem HORS oui","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("ELEMPANNEOUI","Elem Panne oui","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("ELEMNOPLATINE","Elem No platine","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("DIMENSION2","Dimension2","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("DIMENSION3","Dimension3","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("ACONTROLEROUI","A controler oui","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("IDNO","ID No","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("QUANTITE","Quantité","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("STOCK","Stock","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("ETAT","Etat","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("INTERVENTION","Intervention","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("MAJPAR","MAJ par","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("CTRL1","Ctrl1","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("CHAPELLEOUI","Chapelle Oui","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("IDDEPANNGE","ID Dépannge","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("DEBITDIFFERENCEOUI","Débit difference oui","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("DEBITAIRMESURE","Débit air mesuré","","Equipment")
 
 
 write_archibus(ass_attrib, "./02.asset_attrib.xlsx",
                table.header = "Asset Attribute Standards",
                sheet.name = "Sheet1")
 
-# Attribut CHA
+# Attributs CHA
 
 eq_ass_attribut_lieu <- cha_equip0 %>%
   filter (Lieu != "") %>%
@@ -231,7 +262,7 @@ eq_ass_attribut_lieu <- cha_equip0 %>%
             "asset_attribute_std" = "LIEU",
             value = Lieu)
 
-# Attribut CHA Accessoire
+# Attributs CHA Accessoire
 
 eq_ass_attribut_type <- cha_equip_acc0 %>%
   filter (Type != "") %>%
@@ -251,13 +282,13 @@ eq_ass_attribut_valeurhoraire <- cha_equip_acc0 %>%
             "asset_attribute_std" = "VALEURHORAIRE",
             value = ValeurHoraire)
 
-# Attribut VEN
+# Attributs VEN
 
-eq_ass_attribut_type <- ven_equip_acc0 %>%
-  filter (AccessoireType != "") %>%
+eq_ass_attribut_installation <- ven_equip0 %>%
+  filter (`Installation` != "") %>%
   transmute("#eq_asset_attribute.eq_id" = eq_id,
-            "asset_attribute_std" = "TYPE",
-            value = AccessoireType)
+            "asset_attribute_std" = "INSTALLATION",
+            value = `Installation`)
 
 eq_ass_attribut_monobloctype <- ven_equip0 %>%
   filter (`Monobloc Type` != "") %>%
@@ -395,10 +426,216 @@ eq_ass_attribut_fichetechnique <- ven_equip0 %>%
             "asset_attribute_std" = "FICHETECHNIQUE",
             value = `Fiche technique`) 
 
+# Attributs VEN Accessoire
+
+eq_ass_attribut_idcontrat <- ven_equip_acc0 %>% 
+  filter (`IDContrat` != "") %>% 
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "IDCONTRAT",
+            value = `IDContrat`) 
+
+eq_ass_attribut_type <- ven_equip_acc0 %>%
+  filter (AccessoireType != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TYPE",
+            value = `AccessoireType`)
+
+eq_ass_attribut_dimension <- ven_equip_acc0 %>%
+  filter (`Dimension` != "") %>%
+  filter (`Dimension` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "DIMENSION",
+            value = `Dimension`)
+
+eq_ass_attribut_debitair <- ven_equip_acc0 %>%
+  filter (`Débit d'air` != "") %>%
+  filter (`Débit d'air` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "DEBITAIR",
+            value = `Débit d'air`) 
+
+eq_ass_attribut_diametreraccordement <- ven_equip_acc0 %>%
+  filter (`DiametreRaccordement` != "") %>%
+  filter (`DiametreRaccordement` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "DIAMETRERACCORDEMENT",
+            value = `DiametreRaccordement`) 
+
+eq_ass_attribut_vitesseairprevue <- ven_equip_acc0 %>%
+  filter (`VitesseAirPrevue` != "") %>%
+  filter (`VitesseAirPrevue` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "VITESSEAIRPREVUE",
+            value = `VitesseAirPrevue`) 
+
+eq_ass_attribut_vitesseairmesuree <- ven_equip_acc0 %>% 
+  filter (`VitesseAirMesuree` != "") %>%
+  filter (`VitesseAirMesuree` != "0") %>% 
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "VITESSEAIRMESUREE",
+            value = `VitesseAirMesuree`) 
+
+eq_ass_attribut_manometreposeoui <- ven_equip_acc0 %>% 
+  filter (`ManometrePoseOui` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "MANOMETREPOSEOUI",
+            value = `ManometrePoseOui`)
+
+eq_ass_attribut_manometrepression <- ven_equip_acc0 %>% 
+  filter (`ManometrePression` != "") %>%
+  filter (`ManometrePression` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "MANOMETREPRESSION",
+            value = `ManometrePression`) 
+
+eq_ass_attribut_guillotinechapelle <- ven_equip_acc0 %>% 
+  filter (`GuillotineChapelle` != "") %>%
+  filter (`GuillotineChapelle` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "GUILLOTINECHAPELLE", 
+            value = `GuillotineChapelle`) 
+
+eq_ass_attribut_horlogepvgvoui <- ven_equip_acc0 %>% 
+  filter (`HorlogePVGVOui` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "HORLOGEPVGVOUI",
+            value = `HorlogePVGVOui`)
+
+eq_ass_attribut_forsagegvoui <- ven_equip_acc0 %>%
+  filter (`ForsageGVOui` != "") %>% 
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "FORSAGEGVOUI",
+            value = `ForsageGVOui`) 
+
+eq_ass_attribut_elempvoui <- ven_equip_acc0 %>% 
+  filter (`ElemPVOui` != "") %>% 
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "ELEMPVOUI", 
+            value = `ElemPVOui`)
+
+eq_ass_attribut_elemgvoui <- ven_equip_acc0 %>%
+  filter (`ElemGVOui` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "ELEMGVOUI",
+            value = `ElemGVOui`)
+
+eq_ass_attribut_elemautooui <- ven_equip_acc0 %>%
+  filter (`ElemAUTOOui` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "ELEMAUTOOUI",
+            value = `ElemAUTOOui`)
+
+eq_ass_attribut_elemhorsoui <- ven_equip_acc0 %>%
+  filter (`ElemHORSOui` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "ELEMHORSOUI",
+            value = `ElemHORSOui`)
+
+eq_ass_attribut_elempanneoui <- ven_equip_acc0 %>%
+  filter (`ElemPanneOui` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "ELEMPANNEOUI",
+            value = `ElemPanneOui`)
+
+eq_ass_attribut_elemnoplatine <- ven_equip_acc0 %>%
+  filter (`ElemNoPlatine` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "ELEMNOPLATINE",
+            value = `ElemNoPlatine`)
+
+eq_ass_attribut_dimension2 <- ven_equip_acc0 %>%
+  filter (`Dimension2` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "DIMENSION2",
+            value = `Dimension2`)
+
+eq_ass_attribut_dimension3 <- ven_equip_acc0 %>%
+  filter (`Dimension3` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "DIMENSION3",
+            value = `Dimension3`)
+
+eq_ass_attribut_acontroleroui <- ven_equip_acc0 %>%
+  filter (`AControlerOui` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "ACONTROLEROUI",
+            value = `AControlerOui`)
+
+eq_ass_attribut_idno <- ven_equip_acc0 %>%
+  filter (`IDNo` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "IDNO",
+            value = `IDNo`)
+
+eq_ass_attribut_quantite <- ven_equip_acc0 %>%
+  filter (`Quantite` != "") %>%
+  filter (`Quantite` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "QUANTITE",
+            value = `Quantite`)
+
+eq_ass_attribut_stock <- ven_equip_acc0 %>%
+  filter (`Stock` != "") %>%
+  filter (`Stock` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "STOCK",
+            value = `Stock`)
+
+eq_ass_attribut_etat <- ven_equip_acc0 %>%
+  filter (`Etat` != "") %>%
+  filter (`Etat` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "ETAT",
+            value = `Etat`)
+
+eq_ass_attribut_intervention <- ven_equip_acc0 %>%
+  filter (`Intervention` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "INTERVENTION",
+            value = `Intervention`)
+
+eq_ass_attribut_majpar <- ven_equip_acc0 %>%
+  filter (`MAJPar` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "MAJPAR",
+            value = `MAJPar`)
+
+eq_ass_attribut_ctrl1 <- ven_equip_acc0 %>%
+  filter (`Ctrl1` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "CTRL1",
+            value = `Ctrl1`)
+
+eq_ass_attribut_chapelleoui <- ven_equip_acc0 %>%
+  filter (`ChapelleOui` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "CHAPELLEOUI",
+            value = `ChapelleOui`)
+
+eq_ass_attribut_iddepannge <- ven_equip_acc0 %>%
+  filter (`IDDepannge` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "IDDEPANNGE",
+            value = `IDDepannge`)
+
+eq_ass_attribut_debitdifferenceoui <- ven_equip_acc0 %>%
+  filter (`DebitDifferenceOui` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "DEBITDIFFERENCEOUI",
+            value = `DebitDifferenceOui`)
+
+eq_ass_attribut_debitairmesure <- ven_equip_acc0 %>%
+  filter (`DebitAirMesure` != "") %>%
+  filter (`DebitAirMesure` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "DEBITAIRMESURE",
+            value = `DebitAirMesure`)
+
 
 eq_ass_attribut <- rbind(eq_ass_attribut_lieu, 
                          eq_ass_attribut_diametre, 
                          eq_ass_attribut_valeurhoraire,
+                         eq_ass_attribut_installation,
                          eq_ass_attribut_monobloctype,
                          eq_ass_attribut_monoblocno,
                          eq_ass_attribut_debitair,
@@ -420,7 +657,37 @@ eq_ass_attribut <- rbind(eq_ass_attribut_lieu,
                          eq_ass_attribut_priseairdeniernet,
                          eq_ass_attribut_climatisteurarmoire,
                          eq_ass_attribut_raccordement,
-                         eq_ass_attribut_fichetechnique)
+                         eq_ass_attribut_fichetechnique,
+                         eq_ass_attribut_idcontrat,
+                         eq_ass_attribut_dimension,
+                         eq_ass_attribut_diametreraccordement,
+                         eq_ass_attribut_vitesseairprevue,
+                         eq_ass_attribut_vitesseairmesuree,
+                         eq_ass_attribut_manometreposeoui,
+                         eq_ass_attribut_manometrepression,
+                         eq_ass_attribut_guillotinechapelle,
+                         eq_ass_attribut_horlogepvgvoui,
+                         eq_ass_attribut_forsagegvoui,
+                         eq_ass_attribut_elempvoui,
+                         eq_ass_attribut_elemgvoui,
+                         eq_ass_attribut_elemautooui,
+                         eq_ass_attribut_elemhorsoui,
+                         eq_ass_attribut_elempanneoui,
+                         eq_ass_attribut_elemnoplatine,
+                         eq_ass_attribut_dimension2,
+                         eq_ass_attribut_dimension3,
+                         eq_ass_attribut_acontroleroui,
+                         eq_ass_attribut_idno,
+                         eq_ass_attribut_quantite,
+                         eq_ass_attribut_stock,
+                         eq_ass_attribut_etat,
+                         eq_ass_attribut_intervention,
+                         eq_ass_attribut_majpar,
+                         eq_ass_attribut_ctrl1,
+                         eq_ass_attribut_chapelleoui,
+                         eq_ass_attribut_iddepannge,
+                         eq_ass_attribut_debitdifferenceoui,
+                         eq_ass_attribut_debitairmesure)
 
 write_archibus(eq_ass_attribut, "./03.eq_asset_attrib.xlsx",
                table.header = "Equipment Asset Attributes",
