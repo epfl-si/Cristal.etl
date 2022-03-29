@@ -4,6 +4,7 @@ library(dplyr)
 
 GMAO_file = "./GMAO_4D_Export2021_MAPPING_eqstd.xlsx"
 GMAO_Acc_file = "./4D_GMAO_Accessoires_avec UUID_4-3-22.xlsx"
+ELA_Ascenseurs = "./ELA_ascenseurs.xlsx"
 
 A1 <- function(row, col) {
   #' Convert real-world (integer) coordinates to Excel®-style A1 notation.
@@ -281,10 +282,36 @@ ele_equip_parent <- ele_equip0 %>%
             status = "in",
             comments = Remarques)
 
+# ELE Ascenseurs
+
+ele_ass_equip0 <- read_excel(ELA_Ascenseurs, "Inventaire ascenseurs",col_names = TRUE, col_types = NULL, na = "", skip = 0) %>%
+  filter (`Migrer` = "Oui") 
+ele_ass_equip0$eq_id <-paste("ELE-00000-",formatC(seq.int(nrow(ele_ass_equip0)) + nrow(ele_equip0), width=6, flag=0, format="d"),sep = "")
+
+ele_ass_equip <- ele_ass_equip0 %>%
+  left_join(standards_equip, by=c("Domaine technique"="description")) %>%
+  left_join(batiments_import, by=c("Local"="c_porte")) %>%
+  transmute("#eq.eq_id" = eq_id,
+            eq_std = ifelse(is.na(`#eqstd.eq_std`), "A DEFINIR", `#eqstd.eq_std`),
+            bl_id = `#rm.bl_id`,
+            fl_id = fl_id,
+            rm_id = rm_id,
+            site_id = SiteCode,
+            description = type,
+            dv_id = 11500,
+            dp_id = "0047",
+            num_serial = "",
+            modelno = 'No installation',
+            subcomponent_of ="",
+            mfr = Marque,
+            asset_id = paste(`ID Fiche (table Electricité)`,`UUID (table Acsenseurs)`,sep =" - "),
+            status = "in",
+            comments = Remarques)
+
 # ELE Accesoires
 
 ele_equip_acc0 <- read_excel(GMAO_Acc_file, "E_acc",col_names = TRUE, col_types = NULL, na = "", )
-ele_equip_acc0$eq_id <-paste("ELE-00000-",formatC(seq.int(nrow(ele_equip_acc0)) + nrow(ele_equip0), width=6, flag=0, format="d"), sep = "")
+ele_equip_acc0$eq_id <-paste("ELE-00000-",formatC(seq.int(nrow(ele_equip_acc0)) + ele_ass_equip + nrow(ele_equip0), width=6, flag=0, format="d"), sep = "")
 
 ele_equip_acc <- ele_equip_acc0 %>%
   inner_join(ele_equip_parent, by=c("IDFiche"="asset_id"),) %>%
@@ -306,7 +333,7 @@ ele_equip_acc <- ele_equip_acc0 %>%
             comments = Remarques)
 
 
-ele_equip <- rbind(ele_equip_parent, ele_equip_acc)
+ele_equip <- rbind(ele_equip_parent, ele_ass_equip, ele_equip_acc)
 
 write_archibus(ele_equip, "./01.eq-ELE.xlsx",
                table.header = "Equipment",
@@ -346,7 +373,7 @@ ass_attrib[nrow(ass_attrib)+1,] <- c("CLIMATISEURARMOIRE","Climatiseur Armoire M
 ass_attrib[nrow(ass_attrib)+1,] <- c("RACCORDEMENT","Raccordement","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("FICHETECHNIQUE","Fiche technique","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("IDCONTRAT","ID contrat","","Equipment")
-ass_attrib[nrow(ass_attrib)+1,] <- c("DIMENSION","Dimension","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("DIMENSION","Dimension","L-P-H (cm)","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("DIAMETRERACCORDEMENT","Diametre raccordement","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("VITESSEAIRPREVUE","Vitesse air prévue","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("VITESSAIRMESUREE","Vitesse air mesurée","","Equipment")
@@ -413,6 +440,9 @@ ass_attrib[nrow(ass_attrib)+1,] <- c("RELAICONSTANTEDETEMPS","RelaiConstanteDeTe
 ass_attrib[nrow(ass_attrib)+1,] <- c("RELAIIREPONSE","RelaiIReponse","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("RELAITEMPORISATION","RelaiTemporisation","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("RELAIINOMINAL","RelaiINominal","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("CHARGEUTILE","Charge utile","Kg","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TELASCENSEUR","No téléphone ascenseur","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("SYSTEMEURGENCE","Système d'appel d'urgence","","Equipment")
 
 
 write_archibus(ass_attrib, "./02.asset_attrib.xlsx",
@@ -1095,6 +1125,32 @@ eq_ass_attribut_relaiinominal <- ele_equip_acc0 %>%
   transmute("#eq_asset_attribute.eq_id" = eq_id,
             "asset_attribute_std" = "RELAIINOMINAL",
             value = `RelaiINominal`)
+# Assenceurs
+
+eq_ass_attribut_dimensions <- ele_ass_equip0 %>%
+  filter (`Dimensions L-P-H (cm)` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "DIMENSIONS",
+            value = `Dimensions L-P-H (cm)`)
+
+eq_ass_attribut_charge <- ele_ass_equip0 %>%
+  filter (`Charge utile (kg)` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "CHARGEUTILE",
+            value = `Charge utile (kg)`)
+
+eq_ass_attribut_telascenseur <- ele_ass_equip0 %>%
+  filter (`No téléphone ascenseur` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TELASCENSEUR",
+            value = `No téléphone ascenseur`)
+
+eq_ass_attribut_sytemeurgence <- ele_ass_equip0 %>%
+  filter (`Système d'appel d'urgence` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "SYSTEMEURGENCE",
+            value = `Système d'appel d'urgence`)
+
 
 
 eq_ass_attribut <- rbind(eq_ass_attribut_lieu, 
@@ -1190,7 +1246,10 @@ eq_ass_attribut <- rbind(eq_ass_attribut_lieu,
                          eq_ass_attribut_relaiconstantedetemps,
                          eq_ass_attribut_relaiireponse,
                          eq_ass_attribut_relaitemporisation,
-                         eq_ass_attribut_relaiinominal)
+                         eq_ass_attribut_relaiinominal,
+                         eq_ass_attribut_charge,
+                         eq_ass_attribut_telascenseur,
+                         eq_ass_attribut_sytemeurgence)
 
 write_archibus(eq_ass_attribut, "./03.eq_asset_attrib.xlsx",
                table.header = "Equipment Asset Attributes",
