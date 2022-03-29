@@ -2,6 +2,9 @@ library(tidyverse)
 library(readxl)
 library(dplyr)
 
+GMAO_file = "./GMAO_4D_Export2021_MAPPING_eqstd.xlsx"
+GMAO_Acc_file = "./4D_GMAO_Accessoires_avec UUID_4-3-22.xlsx"
+
 A1 <- function(row, col) {
   #' Convert real-world (integer) coordinates to Excel®-style A1 notation.
   dollar_a1 <-
@@ -42,15 +45,15 @@ write_archibus <- function(data, filename, table.header, sheet.name = "sheet1") 
 
 toArchibusStatus <- function(etat) {
   
-  case_when(etat == "FAUX"   ~ "in",
-            etat == "VRAI"   ~ "out",
-            etat == ""       ~ "",
-            TRUE             ~ "out")
+  case_when(etat == "FALSE"   ~ "in",
+            etat == "TRUE"    ~ "out",
+            etat == ""        ~ "",
+            TRUE              ~ "out")
 }
 
 
 
-standards_equip <- read_excel("./GMAO_4D_Export2021_MAPPING_eqstd.xlsx", "Standards d'équipements") %>%
+standards_equip <- read_excel(GMAO_file, "Standards d'équipements") %>%
   rename(std_eq = "Standard d'équipement", dom_tech = "Domaine technique") %>%
   transmute("#eqstd.eq_std" = std_eq,
             description = Description,
@@ -72,7 +75,7 @@ batiments_import <- read_excel("./06. rm.xlsx","Sheet1",col_names = TRUE, col_ty
 
 # CHA Parents
 
-cha_equip0 <- read_excel("./GMAO_4D_Export2021_MAPPING_eqstd.xlsx", "CHA_tout",col_names = TRUE, col_types = NULL, na = "", skip = 1)
+cha_equip0 <- read_excel(GMAO_file, "CHA_tout",col_names = TRUE, col_types = NULL, na = "", skip = 1)
 cha_equip0$eq_id <-paste("CHA-00000-",formatC(seq.int(nrow(cha_equip0)), width=6, flag=0, format="d"),sep = "")
 
 cha_equip_parent <- cha_equip0 %>%
@@ -97,7 +100,7 @@ cha_equip_parent <- cha_equip0 %>%
 
 # CHA Accesoires
 
-cha_equip_acc0 <- read_excel("./4D_GMAO_Accessoires_avec UUID_4-3-22.xlsx", "C_acc",col_names = TRUE, col_types = NULL, na = "", )
+cha_equip_acc0 <- read_excel(GMAO_Acc_file, "C_acc",col_names = TRUE, col_types = NULL, na = "", )
 cha_equip_acc0$eq_id <-paste("CHA-00000-",formatC(seq.int(nrow(cha_equip_acc0)) + nrow(cha_equip0), width=6, flag=0, format="d"), sep = "")
 
 cha_equip_acc <- cha_equip_acc0 %>%
@@ -116,7 +119,7 @@ cha_equip_acc <- cha_equip_acc0 %>%
             modelno = Numero,
             mfr = Marque,
             asset_id = paste("CHA-",UUID, sep =""),
-            status = "",
+            status = "in",
             comments = Remarques)
 
 
@@ -132,7 +135,7 @@ write_archibus(cha_equip, "./01.eq-CHA.xlsx",
 
 # VEN Parents
 
-ven_equip0 <- read_excel("./GMAO_4D_Export2021_MAPPING_eqstd.xlsx", "VEN_tout",col_names = TRUE, col_types = NULL, na = "", skip = 1)
+ven_equip0 <- read_excel(GMAO_file, "VEN_tout",col_names = TRUE, col_types = NULL, na = "", skip = 1)
 ven_equip0$eq_id <-paste("VEN-00000-",formatC(seq.int(nrow(ven_equip0)), width=6, flag=0, format="d"),sep = "")
 
 ven_equip_parent <- ven_equip0 %>%
@@ -157,7 +160,7 @@ ven_equip_parent <- ven_equip0 %>%
 
 # CHA Accesoires
 
-ven_equip_acc0 <- read_excel("./4D_GMAO_Accessoires_avec UUID_4-3-22.xlsx", "V_acc",col_names = TRUE, col_types = NULL, na = "", )
+ven_equip_acc0 <- read_excel(GMAO_Acc_file, "V_acc",col_names = TRUE, col_types = NULL, na = "", )
 ven_equip_acc0$eq_id <-paste("VEN-00000-",formatC(seq.int(nrow(ven_equip_acc0)) + nrow(ven_equip0), width=6, flag=0, format="d"), sep = "")
 
 ven_equip_acc <- ven_equip_acc0 %>%
@@ -175,7 +178,7 @@ ven_equip_acc <- ven_equip_acc0 %>%
             num_serial = IDNo,
             mfr = "",
             asset_id = paste("VEN-",UUID, sep =""),
-            status = "",
+            status = "in",
 #           date_in_service = "",
             comments = Remarques)
 
@@ -185,6 +188,130 @@ ven_equip <- rbind(ven_equip_parent, ven_equip_acc)
 write_archibus(ven_equip, "./01.eq-VEN.xlsx",
                table.header = "Equipment",
                sheet.name = "Equipment")
+
+##################################
+# SAN equipement
+##################################
+
+# SAN Parents
+
+san_equip0 <- read_excel(GMAO_file, "SAN_tout",col_names = TRUE, col_types = NULL, na = "", skip = 1)
+san_equip0$eq_id <-paste("SAN-00000-",formatC(seq.int(nrow(san_equip0)), width=6, flag=0, format="d"),sep = "")
+
+san_equip_parent <- san_equip0 %>%
+  left_join(standards_equip, by=c("STANDARD D'EQUIPEMENT"="description")) %>%
+  left_join(batiments_import, by=c("Local no"="c_porte")) %>%
+  transmute("#eq.eq_id" = eq_id,
+            eq_std = ifelse(is.na(`#eqstd.eq_std`), "A DEFINIR", `#eqstd.eq_std`),
+            bl_id = `#rm.bl_id`,
+            fl_id = fl_id,
+            rm_id = rm_id,
+            site_id = SiteCode,
+            description = Nom,
+            dv_id = 11500,
+            dp_id = "0047",
+            num_serial = "",
+            subcomponent_of ="",
+            mfr = "",
+            asset_id = `ID Fiche`,
+            status = "in",
+            #            date_in_service = `Mise en service`,
+            comments = Remarques)
+
+# SAN Accesoires
+san_equip_acc0 <- read_excel(GMAO_Acc_file, "S_acc",col_names = TRUE, col_types = NULL, na = "", )
+san_equip_acc0$eq_id <-paste("SAN-00000-",formatC(seq.int(nrow(san_equip_acc0)) + nrow(san_equip0), width=6, flag=0, format="d"), sep = "")
+
+san_equip_acc <- san_equip_acc0 %>%
+  left_join(san_equip_parent, by=c("IDFiche"="asset_id")) %>%
+  transmute(subcomponent_of = `#eq.eq_id`,
+            "#eq.eq_id" = eq_id,
+            eq_std = "ACCESSOIRE",
+            bl_id = bl_id,
+            fl_id = fl_id,
+            rm_id = rm_id,
+            site_id = site_id,
+            description = AccessoireDescription,
+            dv_id = 11500,
+            dp_id = "0047",
+            num_serial = Numero,
+            mfr = Marque,
+            asset_id = paste("SAN-",UUID, sep =""),
+            status = "in",
+            #           date_in_service = "",
+            comments = Remarques)
+
+
+san_equip <- rbind(san_equip_parent, san_equip_acc)
+
+write_archibus(san_equip, "./01.eq-SAN.xlsx",
+               table.header = "Equipment",
+               sheet.name = "Equipment")
+
+
+##################################
+# ELE equipement
+##################################
+
+# ELE Parents
+
+ele_equip0 <- read_excel(GMAO_file, "ELE_tout",col_names = TRUE, col_types = NULL, na = "", skip = 1) %>%
+  filter (`ID Famille` != "Stations MT") %>%
+  filter (`ID Famille` != "Ascenseurs/Monte-charges") %>%
+  filter (`ID Famille` != "Téléphones ascenseurs")
+ele_equip0$eq_id <-paste("ELE-00000-",formatC(seq.int(nrow(ele_equip0)), width=6, flag=0, format="d"),sep = "")
+
+ele_equip_parent <- ele_equip0 %>%
+  left_join(standards_equip, by=c("STANDARD D'EQUIPEMENT"="description")) %>%
+  left_join(batiments_import, by=c("Local no"="c_porte")) %>%
+  transmute("#eq.eq_id" = eq_id,
+            eq_std = ifelse(is.na(`#eqstd.eq_std`), "A DEFINIR", `#eqstd.eq_std`),
+            bl_id = `#rm.bl_id`,
+            fl_id = fl_id,
+            rm_id = rm_id,
+            site_id = SiteCode,
+            description = Nom,
+            dv_id = 11500,
+            dp_id = "0047",
+            num_serial = "",
+            modelno = "",
+            subcomponent_of ="",
+            mfr = "",
+            asset_id = `ID Fiche`,
+            status = "in",
+            comments = Remarques)
+
+# ELE Accesoires
+
+ele_equip_acc0 <- read_excel(GMAO_Acc_file, "E_acc",col_names = TRUE, col_types = NULL, na = "", )
+ele_equip_acc0$eq_id <-paste("ELE-00000-",formatC(seq.int(nrow(ele_equip_acc0)) + nrow(ele_equip0), width=6, flag=0, format="d"), sep = "")
+
+ele_equip_acc <- ele_equip_acc0 %>%
+  inner_join(ele_equip_parent, by=c("IDFiche"="asset_id"),) %>%
+  transmute(subcomponent_of = `#eq.eq_id`,
+            "#eq.eq_id" = eq_id,
+            eq_std = "ACCESSOIRE",
+            bl_id = bl_id,
+            fl_id = fl_id,
+            rm_id = rm_id,
+            site_id = site_id,
+            description = AccessoireDescription,
+            dv_id = 11500,
+            dp_id = "0047",
+            num_serial = NoDeSerie,
+            modelno = "Numero",
+            mfr = Fournisseur,
+            asset_id = paste("ELE-",UUID, sep =""),
+            status = "in",
+            comments = Remarques)
+
+
+ele_equip <- rbind(ele_equip_parent, ele_equip_acc)
+
+write_archibus(ele_equip, "./01.eq-ELE.xlsx",
+               table.header = "Equipment",
+               sheet.name = "Equipment")
+
 
 ##################################
 # Attributs
@@ -221,8 +348,8 @@ ass_attrib[nrow(ass_attrib)+1,] <- c("FICHETECHNIQUE","Fiche technique","","Equi
 ass_attrib[nrow(ass_attrib)+1,] <- c("IDCONTRAT","ID contrat","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("DIMENSION","Dimension","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("DIAMETRERACCORDEMENT","Diametre raccordement","","Equipment")
-ass_attrib[nrow(ass_attrib)+1,] <- c("VitesseAirPrevue","Vitesse air prévue","","Equipment")
-ass_attrib[nrow(ass_attrib)+1,] <- c("VitesseAirMesuree","Vitesse air mesurée","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("VITESSEAIRPREVUE","Vitesse air prévue","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("VITESSAIRMESUREE","Vitesse air mesurée","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("MANOMETREPOSEOUI","Manometre pose oui","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("MANOMETREPRESSION","Manometre pression","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("GUILLOTINECHAPELLE","Guillotine chapelle","","Equipment")
@@ -248,6 +375,44 @@ ass_attrib[nrow(ass_attrib)+1,] <- c("CHAPELLEOUI","Chapelle Oui","","Equipment"
 ass_attrib[nrow(ass_attrib)+1,] <- c("IDDEPANNGE","ID Dépannge","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("DEBITDIFFERENCEOUI","Débit difference oui","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("DEBITAIRMESURE","Débit air mesuré","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("DEBITNOM","Débit nom","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("DEBITEFFECTIF","Débit effectif","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("POSITION","Position","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("NBREHEURE","NbreHeure","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("NBREPERSONNES","NbrePersonnes","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("ANNEEENSERVICE","AnneeEnService","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("ANNEECONSTRUCTION","AnneeConstruction","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("RELAIFOURNISSEUR","RelaiFournisseur","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("AUTOTRANSFOOUI","AutotransfoOui","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TRANSFORESEAU","TransfoReseau","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TRANSFOCELLULE","TransfoCellule","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("RELAITYPE","RelaiType","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("UNOMINALE","UNominale","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TRANSFOUPRIMAIRE","TransfoUPrimaire","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TRANSFOUSECONDAIREREGLEE","TransfoUSecondaireReglee","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TRANSFOREMPLISSAGE","TransfoRemplissage","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TRANSFOCOUPLAGE","TransfoCouplage","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TRANSFOUCC","TransfoUcc","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("UPRIMAIRE","UPrimaire","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TRANSFOUSECONDAIRE1","TransfoUSecondaire1","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TRANSFOUSECONDAIRE2","TransfoUSecondaire2","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TRANSFOUSECONDAIRE3","TransfoUSecondaire3","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TRANSFOUSECONDAIRE4","TransfoUSecondaire4","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TRANSFOUSECONDAIRE5","TransfoUSecondaire5","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TRANSFOPERTEAVIDE","TransfoPerteAVide","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TRANSFOPERTEENCHARGE","TransfoPerteEnCharge","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TRANSFOMASSETOTALE","TransfoMasseTotale","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TRANSFOMADDEHUILE","TransfoMaddeHuile","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TRANSFOPREALARME","TransfoPreAlarme","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TRANSFOALARME","TransfoAlarme","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("DISJONCTEURINOMINAL","DisjoncteurINominal","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("DISJONCTEURPOUVOIRDECOUPURE","DisjoncteurPouvoirDeCoupure","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("RELAIITHERNMIQUEREGLE","RelaiIThernmiqueRegle","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("RELAIDECLANCHEINSTANTANE","RelaiDeclancheInstantane","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("RELAICONSTANTEDETEMPS","RelaiConstanteDeTemps","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("RELAIIREPONSE","RelaiIReponse","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("RELAITEMPORISATION","RelaiTemporisation","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("RELAIINOMINAL","RelaiINominal","","Equipment")
 
 
 write_archibus(ass_attrib, "./02.asset_attrib.xlsx",
@@ -448,11 +613,11 @@ eq_ass_attribut_dimension <- ven_equip_acc0 %>%
             value = `Dimension`)
 
 eq_ass_attribut_debitair <- ven_equip_acc0 %>%
-  filter (`Débit d'air` != "") %>%
-  filter (`Débit d'air` != "0") %>%
+  filter (`DebitAir` != "") %>%
+  filter (`DebitAir` != "0") %>%
   transmute("#eq_asset_attribute.eq_id" = eq_id,
             "asset_attribute_std" = "DEBITAIR",
-            value = `Débit d'air`) 
+            value = `DebitAir`) 
 
 eq_ass_attribut_diametreraccordement <- ven_equip_acc0 %>%
   filter (`DiametreRaccordement` != "") %>%
@@ -631,6 +796,306 @@ eq_ass_attribut_debitairmesure <- ven_equip_acc0 %>%
             "asset_attribute_std" = "DEBITAIRMESURE",
             value = `DebitAirMesure`)
 
+# Attributs SAN Accessoire
+
+eq_ass_attribut_type <- san_equip_acc0 %>%
+  filter (Type != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TYPE",
+            value = Type)
+
+eq_ass_attribut_valeurhoraire <- san_equip_acc0 %>%
+  filter (ValeurHoraire != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "VALEURHORAIRE",
+            value = ValeurHoraire)
+
+eq_ass_attribut_diametre <- san_equip_acc0 %>%
+  filter (Diametre != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "DIAMETRE",
+            value = Diametre)
+
+eq_ass_attribut_debitnom <- san_equip_acc0 %>%
+  filter (`DebitNom` != "") %>%
+  filter (`DebitNom` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "DEBITNOM",
+            value = `DebitNom`) 
+
+eq_ass_attribut_debiteffectif <- san_equip_acc0 %>%
+  filter (`DebitEffectif` != "") %>%
+  filter (`DebitEffectif` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "DEBITEFFECTIF",
+            value = `DebitEffectif`) 
+
+eq_ass_attribut_position <- san_equip_acc0 %>%
+  filter (`Position` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "POSITION",
+            value = `Position`) 
+
+# Attributs ELE
+
+eq_ass_attribut_type <- ele_equip_acc0 %>%
+  filter (`` != "") %>%	
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TYPE",
+            value = `Type`)
+
+eq_ass_attribut_nbreheure <- ele_equip_acc0 %>%
+  filter (`NbreHeure` != "") %>%
+  filter (`NbreHeure` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "NBREHEURE",
+            value = `NbreHeure`)
+
+eq_ass_attribut_quantite <- ele_equip_acc0 %>%
+  filter (`Quantite` != "") %>%
+  filter (`Quantite` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "QUANTITE",
+            value = `Quantite`)
+
+eq_ass_attribut_nbrepersonnes <- ele_equip_acc0 %>%
+  filter (`NbrePersonnes` != "") %>%
+  filter (`NbrePersonnes` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "NBREPERSONNES",
+            value = `NbrePersonnes`)
+
+eq_ass_attribut_puissance <- ele_equip_acc0 %>%
+  filter (`Puissance` != "") %>%
+  filter (`Puissance` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "PUISSANCE",
+            value = `Puissance`)
+
+eq_ass_attribut_anneeenservice <- ele_equip_acc0 %>%
+  filter (`AnneeEnService` != "") %>%
+  filter (`AnneeEnService` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "ANNEEENSERVICE",
+            value = `AnneeEnService`)
+
+eq_ass_attribut_anneeconstruction <- ele_equip_acc0 %>%
+  filter (`AnneeConstruction` != "") %>%
+  filter (`AnneeConstruction` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "ANNEECONSTRUCTION",
+            value = `AnneeConstruction`)
+
+eq_ass_attribut_relaifournisseur <- ele_equip_acc0 %>%
+  filter (`RelaiFournisseur` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "RELAIFOURNISSEUR",
+            value = `RelaiFournisseur`)
+
+eq_ass_attribut_autotransfooui <- ele_equip_acc0 %>%
+  filter (`AutotransfoOui` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "AUTOTRANSFOOUI",
+            value = `AutotransfoOui`)
+
+eq_ass_attribut_transforeseau <- ele_equip_acc0 %>%
+  filter (`TransfoReseau` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TRANSFORESEAU",
+            value = `TransfoReseau`)
+
+eq_ass_attribut_transfocellule <- ele_equip_acc0 %>%
+  filter (`TransfoCellule` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TRANSFOCELLULE",
+            value = `TransfoCellule`)
+
+eq_ass_attribut_relaitype <- ele_equip_acc0 %>%
+  filter (`RelaiType` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "RELAITYPE",
+            value = `RelaiType`)
+
+eq_ass_attribut_unominale <- ele_equip_acc0 %>%
+  filter (`UNominale` != "") %>%
+  filter (`UNominale` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "UNOMINALE",
+            value = `UNominale`)
+
+eq_ass_attribut_transfouprimaire <- ele_equip_acc0 %>%
+  filter (`TransfoUPrimaire` != "") %>%
+  filter (`TransfoUPrimaire` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TRANSFOUPRIMAIRE",
+            value = `TransfoUPrimaire`)
+
+eq_ass_attribut_transfousecondairereglee <- ele_equip_acc0 %>%
+  filter (`TransfoUSecondaireReglee` != "") %>%
+  filter (`TransfoUPrimaire` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TRANSFOUSECONDAIREREGLEE",
+            value = `TransfoUSecondaireReglee`)
+
+eq_ass_attribut_transforemplissage <- ele_equip_acc0 %>%
+  filter (`TransfoRemplissage` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TRANSFOREMPLISSAGE",
+            value = `TransfoRemplissage`)
+
+eq_ass_attribut_transfocouplage <- ele_equip_acc0 %>%
+  filter (`TransfoCouplage` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TRANSFOCOUPLAGE",
+            value = `TransfoCouplage`)
+
+eq_ass_attribut_transfoucc <- ele_equip_acc0 %>%
+  filter (`TransfoUcc` != "") %>%
+  filter (`TransfoUcc` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TRANSFOUCC",
+            value = `TransfoUcc`)
+
+eq_ass_attribut_uprimaire <- ele_equip_acc0 %>%
+  filter (`UPrimaire` != "") %>%
+  filter (`UPrimaire` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "UPRIMAIRE",
+            value = `UPrimaire`)
+
+eq_ass_attribut_transfousecondaire1 <- ele_equip_acc0 %>%
+  filter (`TransfoUSecondaire1` != "") %>%
+  filter (`TransfoUSecondaire1` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TRANSFOUSECONDAIRE1",
+            value = `TransfoUSecondaire1`)
+
+eq_ass_attribut_transfousecondaire2 <- ele_equip_acc0 %>%
+  filter (`TransfoUSecondaire2` != "") %>%
+  filter (`TransfoUSecondaire2` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TRANSFOUSECONDAIRE2",
+            value = `TransfoUSecondaire2`)
+
+eq_ass_attribut_transfousecondaire3 <- ele_equip_acc0 %>%
+  filter (`TransfoUSecondaire3` != "") %>%
+  filter (`TransfoUSecondaire3` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TRANSFOUSECONDAIRE3",
+            value = `TransfoUSecondaire3`)
+
+eq_ass_attribut_transfousecondaire4 <- ele_equip_acc0 %>%
+  filter (`TransfoUSecondaire4` != "") %>%
+  filter (`TransfoUSecondaire4` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TRANSFOUSECONDAIRE4",
+            value = `TransfoUSecondaire4`)
+
+eq_ass_attribut_transfousecondaire5 <- ele_equip_acc0 %>%
+  filter (`TransfoUSecondaire5` != "") %>%
+  filter (`TransfoUSecondaire5` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TRANSFOUSECONDAIRE5",
+            value = `TransfoUSecondaire5`)
+
+eq_ass_attribut_transfoperteavide <- ele_equip_acc0 %>%
+  filter (`TransfoPerteAVide` != "") %>%
+  filter (`TransfoPerteAVide` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TRANSFOPERTEAVIDE",
+            value = `TransfoPerteAVide`)
+
+eq_ass_attribut_transfoperteencharge <- ele_equip_acc0 %>%
+  filter (`TransfoPerteEnCharge` != "") %>%
+  filter (`TransfoPerteEnCharge` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TRANSFOPERTEENCHARGE",
+            value = `TransfoPerteEnCharge`)
+
+eq_ass_attribut_transfomassetotale <- ele_equip_acc0 %>%
+  filter (`TransfoMasseTotale` != "") %>%
+  filter (`TransfoMasseTotale` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TRANSFOMASSETOTALE",
+            value = `TransfoMasseTotale`)
+
+eq_ass_attribut_transfomaddehuile <- ele_equip_acc0 %>%
+  filter (`TransfoMaddeHuile` != "") %>%
+  filter (`TransfoMaddeHuile` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TRANSFOMADDEHUILE",
+            value = `TransfoMaddeHuile`)
+
+eq_ass_attribut_transfoprealarme <- ele_equip_acc0 %>%
+  filter (`TransfoPreAlarme` != "") %>%
+  filter (`TransfoPreAlarme` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TRANSFOPREALARME",
+            value = `TransfoPreAlarme`)
+
+eq_ass_attribut_transfoalarme <- ele_equip_acc0 %>%
+  filter (`TransfoAlarme` != "") %>%
+  filter (`TransfoAlarme` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TRANSFOALARME",
+            value = `TransfoAlarme`)
+
+eq_ass_attribut_disjoncteurinominal <- ele_equip_acc0 %>%
+  filter (`DisjoncteurINominal` != "") %>%
+  filter (`DisjoncteurINominal` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "DISJONCTEURINOMINAL",
+            value = `DisjoncteurINominal`)
+
+eq_ass_attribut_disjoncteurpouvoirdecoupure <- ele_equip_acc0 %>%
+  filter (`DisjoncteurPouvoirDeCoupure` != "") %>%
+  filter (`DisjoncteurPouvoirDeCoupure` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "DISJONCTEURPOUVOIRDECOUPURE",
+            value = `DisjoncteurPouvoirDeCoupure`)
+
+eq_ass_attribut_relaiithernmiqueregle <- ele_equip_acc0 %>%
+  filter (`RelaiIThernmiqueRegle` != "") %>%
+  filter (`RelaiIThernmiqueRegle` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "RELAIITHERNMIQUEREGLE",
+            value = `RelaiIThernmiqueRegle`)
+
+eq_ass_attribut_relaideclancheinstantane <- ele_equip_acc0 %>%
+  filter (`RelaiDeclancheInstantane` != "") %>%
+  filter (`RelaiDeclancheInstantane` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "RELAIDECLANCHEINSTANTANE",
+            value = `RelaiDeclancheInstantane`)
+
+eq_ass_attribut_relaiconstantedetemps <- ele_equip_acc0 %>%
+  filter (`RelaiConstanteDeTemps` != "") %>%
+  filter (`RelaiConstanteDeTemps` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "RELAICONSTANTEDETEMPS",
+            value = `RelaiConstanteDeTemps`)
+
+eq_ass_attribut_relaiireponse <- ele_equip_acc0 %>%
+  filter (`RelaiIReponse` != "") %>%
+  filter (`RelaiIReponse` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "RELAIIREPONSE",
+            value = `RelaiIReponse`)
+
+eq_ass_attribut_relaitemporisation <- ele_equip_acc0 %>%
+  filter (`RelaiTemporisation` != "") %>%
+  filter (`RelaiTemporisation` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "RELAITEMPORISATION",
+            value = `RelaiTemporisation`)
+
+eq_ass_attribut_relaiinominal <- ele_equip_acc0 %>%
+  filter (`RelaiINominal` != "") %>%
+  filter (`RelaiINominal` != "0") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "RELAIINOMINAL",
+            value = `RelaiINominal`)
+
 
 eq_ass_attribut <- rbind(eq_ass_attribut_lieu, 
                          eq_ass_attribut_diametre, 
@@ -687,7 +1152,45 @@ eq_ass_attribut <- rbind(eq_ass_attribut_lieu,
                          eq_ass_attribut_chapelleoui,
                          eq_ass_attribut_iddepannge,
                          eq_ass_attribut_debitdifferenceoui,
-                         eq_ass_attribut_debitairmesure)
+                         eq_ass_attribut_debitairmesure,
+                         eq_ass_attribut_debitnom,
+                         eq_ass_attribut_debiteffectif,
+                         eq_ass_attribut_position,
+                         eq_ass_attribut_nbreheure,
+                         eq_ass_attribut_nbrepersonnes,
+                         eq_ass_attribut_anneeenservice,
+                         eq_ass_attribut_anneeconstruction,
+                         eq_ass_attribut_relaifournisseur,
+                         eq_ass_attribut_autotransfooui,
+                         eq_ass_attribut_transforeseau,
+                         eq_ass_attribut_transfocellule,
+                         eq_ass_attribut_relaitype,
+                         eq_ass_attribut_unominale,
+                         eq_ass_attribut_transfouprimaire,
+                         eq_ass_attribut_transfousecondairereglee,
+                         eq_ass_attribut_transforemplissage,
+                         eq_ass_attribut_transfocouplage,
+                         eq_ass_attribut_transfoucc,
+                         eq_ass_attribut_uprimaire,
+                         eq_ass_attribut_transfousecondaire1,
+                         eq_ass_attribut_transfousecondaire2,
+                         eq_ass_attribut_transfousecondaire3,
+                         eq_ass_attribut_transfousecondaire4,
+                         eq_ass_attribut_transfousecondaire5,
+                         eq_ass_attribut_transfoperteavide,
+                         eq_ass_attribut_transfoperteencharge,
+                         eq_ass_attribut_transfomassetotale,
+                         eq_ass_attribut_transfomaddehuile,
+                         eq_ass_attribut_transfoprealarme,
+                         eq_ass_attribut_transfoalarme,
+                         eq_ass_attribut_disjoncteurinominal,
+                         eq_ass_attribut_disjoncteurpouvoirdecoupure,
+                         eq_ass_attribut_relaiithernmiqueregle,
+                         eq_ass_attribut_relaideclancheinstantane,
+                         eq_ass_attribut_relaiconstantedetemps,
+                         eq_ass_attribut_relaiireponse,
+                         eq_ass_attribut_relaitemporisation,
+                         eq_ass_attribut_relaiinominal)
 
 write_archibus(eq_ass_attribut, "./03.eq_asset_attrib.xlsx",
                table.header = "Equipment Asset Attributes",
