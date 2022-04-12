@@ -11,7 +11,9 @@ library("data.table")
 
 #setwd("/Users/venries/GitHub/Cristal")
 
-Missions4D_file = "./4DMissions_08.04.2022.csv"
+Missions4D_file = "./4DMissions_11.04.2022.csv"
+Devis4D_file = "./Export_Devis-CFC.csv"
+Tresoreries4D_file="./Export_Tresoreries.csv"
 
 A1 <- function(row, col) {
     #' Convert real-world (integer) coordinates to Excel®-style A1 notation.
@@ -88,9 +90,10 @@ mission_import <- fread(file = Missions4D_file  , encoding = "Latin-1") %>%
   mutate(Estimatif = replace(Estimatif, Estimatif == 0, NA)) %>%
   mutate(BudgetTotal = replace(BudgetTotal, BudgetTotal == 0, NA)) %>%
   mutate(FullNameDemandeur = tolower(Demandeur))  %>%
+  mutate(FullNameCP = tolower(`CP Nom`)) %>%
   mutate(CP = as.numeric(`CP SCIPER`)) %>%
-  mutate(Début = replace(Début, Début == "00.00.00", NA)) %>%
-  mutate(Remise = replace(Remise, Remise == "00.00.00", NA))
+  mutate(Début = as.Date(replace(Début, Début == "00.00.00", NA),"%d.%m.%Y")) %>%
+  mutate(Remise = as.Date(replace(Remise, Remise == "00.00.00", NA),"%d.%m.%Y"))
 
 batiments_import <- read_excel("./Export Bâtiments.xlsx")
 
@@ -100,12 +103,19 @@ em <- read_excel("./em.xlsx", skip = 1)  %>%
   mutate(FullName = tolower(paste(name_last, name_first)) ) %>%
 #  mutate(sciper = as.numeric(gsub(".*- ","",em_id)))
   mutate(sciper = as.numeric(em_number))
+
 m <- mission_import %>%
   transmute(FullNameDemandeur=FullNameDemandeur,
+            FullNameCP = FullNameCP,
             CP = CP)
 m2 <- m %>%
   left_join(em, by=c("FullNameDemandeur"= "FullName"),suffix = c("","_d")) %>%
-  left_join(em, by=c("CP" = "sciper"),suffix = c("","cp"))
+  left_join(em, by=c("FullNameCP" = "FullName"),suffix = c("","c2")) %>%
+  left_join(em, by=c("CP" = "sciper"),suffix = c("","cp")) %>%
+  transmute (CP=CP,
+              FullNameCP=FullNameCP,
+              `#em.em_idcp` = `#em.em_idcp`,
+              `#em.em_idc2` = `#em.em_idc2`)
 
 mission_archibus <-
   mission_import %>%
@@ -113,6 +123,7 @@ mission_archibus <-
   left_join(dp, by=c("CFNo"="dp_id")) %>%
   left_join(em, by=c("FullNameDemandeur"= "FullName"),suffix = c("","_d")) %>%
   left_join(em, by=c("CP" = "sciper"),suffix = c("","cp")) %>%
+  left_join(em, by=c("FullNameCP" = "FullName"),suffix = c("","c2")) %>%
   transmute("#project.project_id" = `ID Mission`,
             project_name = Intitulé,
             project_type = Priorisation, #attention il faudra mettre les ids
@@ -128,8 +139,8 @@ mission_archibus <-
             date_start = Début,
             date_end = Remise,
             requestor = `#em.em_id`, ## ifelse(is.na(em_id), Demandeur, em_id),
-            proj_mgr = `#em.em_idcp`, ## ifelse(is.na(em_idcp), ChefProjet, em_idcp),
-            scope=ServiceTraitant,
+            proj_mgr =ifelse(is.na(`#em.em_idcp`), `#em.em_idc2`, `#em.em_idcp`),
+            scope=`CF infos`,
             benefit=Justificatif,
             contact_id="TBD")
   
@@ -137,5 +148,30 @@ write_archibus(mission_archibus, "./01_projects.xlsx",
                table.header = "Activity Projects",
                sheet.name = "4d_projects")
 
+#=================================
+#  Action Items
+#=================================    
+devis_import <- fread(file = Devis4D_file  , encoding = "Latin-1")
+tresoreries_import <- fread(file = Tresoreries4D_file  , encoding = "Latin-1") %>%
+  group_by(Mission) %>%
+  summarise(Année = first(Année))
+  
+actionItems <- devis_import %>%
+  left_join(tresoreries_import, by=c("Mission"= "Mission")) %>%
+  transmute("#activity_log.activity_log_id" = "",
+            activity_type = "PROJECT - COST",
+            cost_est_cap = `Montant BBL`,
+            cost_est_design_cap = `Montant BBL`,
+            csi_id = CFC,
+            date_scheduled = paste(Année,"-01-01",sep=""),
+            project_id = Mission,
+            status = "PLANNED",
+            action_title = Travaux,
+            source_type = ifelse(`Montant BBL` > 0, "BBL", ifelse(`Montant EPFL` > 0, "EPFL","")),
+            ar_is_change_order = 0)
+
+write_archibus(actionItems, "./04_ActionItems.xlsx",
+               table.header = "Action Items",
+               sheet.name = "4d_projects")
 
 
