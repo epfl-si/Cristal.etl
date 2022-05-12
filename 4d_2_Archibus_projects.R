@@ -8,12 +8,14 @@ library(readxl)
 library(dplyr)
 library(lubridate)
 library("data.table") 
-
+library("stringr")
+options(scipen = 999)   
 #setwd("/Users/venries/GitHub/Cristal")
 
-Missions4D_file = "./4DMissions_11.04.2022.csv"
-Devis4D_file = "./Export_Devis-CFC.csv"
-Tresoreries4D_file="./Export_Tresoreries.csv"
+Missions4D_file = "./4DMissions_06.05.2022.csv"
+Devis4D_file = "./4DDevisCFC_09.05.2022.csv"
+Tresoreries4D_file="./4DTresoreries_06.05.2022.csv"
+Revue4D_file="./4DRevuesProjets_06.05.2022.csv"
 
 A1 <- function(row, col) {
     #' Convert real-world (integer) coordinates to Excel®-style A1 notation.
@@ -42,11 +44,11 @@ write_archibus <- function(data, filename, table.header, sheet.name = "sheet1") 
                        xlsx::CellStyle(wb) + xlsx::Font(wb, heightInPoints=22, isBold=TRUE))
     csDate <- xlsx::CellStyle(wb) + xlsx::DataFormat("yyyy-mm-dd")
     csNum <- xlsx::CellStyle(wb) + xlsx::DataFormat("0000")
+    csDeci <- xlsx::CellStyle(wb) + xlsx::DataFormat("#,##0.00")
     csWrap <- xlsx::CellStyle(wb) + xlsx::Alignment(wrapText = TRUE)
     
-    colwrap <- list(
-      '4' = csWrap
-    )
+    coldeci <- list('3'= csDeci, '4'= csDeci)
+    colwrap <- list('4' = csWrap)
     colnum <- list(
       '9' = csNum,
       '10' = csNum
@@ -151,26 +153,57 @@ write_archibus(mission_archibus, "./01_projects.xlsx",
 #=================================
 #  Action Items
 #=================================    
-devis_import <- fread(file = Devis4D_file  , encoding = "Latin-1")
+devis_import <- fread(file = Devis4D_file  , encoding = "Latin-1") %>%
+  mutate(CFC=str_replace_all(devis_import$CFC,"[ *]|[.]$","")) 
+#  mutate(as.numeric(`Montant EPFL`)) %>%
+#  mutate(`Montant BLL` = format(as.numeric(`Montant BBL`,scientific = FALSE)))
+
+
 tresoreries_import <- fread(file = Tresoreries4D_file  , encoding = "Latin-1") %>%
-  group_by(Mission) %>%
-  summarise(Année = first(Année))
-  
-actionItems <- devis_import %>%
-  left_join(tresoreries_import, by=c("Mission"= "Mission")) %>%
+  filter(Année != 0) %>%
+  group_by(`ID Mission`) %>%
+  summarise(Année = first(Année)) 
+revue_import <- fread(file = Revue4D_file, encoding = "Latin-1") %>%
+  filter (`Revue no`== 1) %>%
+  mutate(Tot_Montant123=Montant1+Montant2+Montant3) %>%
+  filter (`Tot_Montant123`!= 0) %>%
+  ### filter les montant à 0
   transmute("#activity_log.activity_log_id" = "",
             activity_type = "PROJECT - COST",
-            cost_est_cap = `Montant BBL`,
-            cost_est_design_cap = `Montant BBL`,
+            cost_est_cap = Tot_Montant123,
+            cost_est_design_cap = "",
+            csi_id ="999",
+            date_scheduled = ifelse(Date=="00.00.00","",format(as.Date(Date,"%d.%m.%Y"), format="%Y-%m-%d")),
+            project_id = `ID Mission`,
+            status = "PLANNED",
+            action_title = "Budget initial du projet repris de 4D",
+            source_type = "EPFL",
+            ar_is_change_order = 'No') %>%
+  mutate(cost_est_cap=as.numeric(cost_est_cap),
+         cost_est_design_cap=as.numeric(cost_est_design_cap))
+
+
+actionItems <- devis_import %>%
+  left_join(tresoreries_import, by=c("ID Mission"= "ID Mission")) %>%
+  left_join(revue_import,by=c("ID Mission"= "project_id"),suffix = c("","_r")) %>%
+  transmute("#activity_log.activity_log_id" = "",
+            activity_type = "PROJECT - COST",
+            cost_est_cap = ifelse(!is.na(`cost_est_cap` ) , "", ifelse(`Montant BBL`>0,as.numeric(`Montant BBL`),as.numeric(`Montant EPFL`))),
+            cost_est_design_cap = format(ifelse(`Montant BBL`>0,`Montant BBL`,`Montant EPFL`),scientific = FALSE),
             csi_id = CFC,
-            date_scheduled = paste(Année,"-01-01",sep=""),
-            project_id = Mission,
+            date_scheduled = ifelse(is.na(Année),"",paste(Année,"-01-01",sep = "")),
+            project_id = `ID Mission`,
             status = "PLANNED",
             action_title = Travaux,
-            source_type = ifelse(`Montant BBL` > 0, "BBL", ifelse(`Montant EPFL` > 0, "EPFL","")),
-            ar_is_change_order = 0)
+            source_type = ifelse(substr(CFC,1,1) =="3" | substr(CFC,1,1) == "9", "EPFL", "BBL"),
+            ar_is_change_order = 'No') %>%
+  mutate(cost_est_cap=as.numeric(cost_est_cap),
+         cost_est_design_cap=as.numeric(cost_est_design_cap))
 
-write_archibus(actionItems, "./04_ActionItems.xlsx",
+actionItems_final <- rbind(actionItems, revue_import)
+
+
+write_archibus(actionItems_final, "./04_ActionItems.xlsx",
                table.header = "Action Items",
                sheet.name = "4d_projects")
 
