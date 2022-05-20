@@ -341,7 +341,7 @@ Elec_equip0 <- fread(file = Elec_file  , encoding = "Latin-1")
   
 levag_equip_valide <- levag_valide %>%
   left_join(Elec_equip0, by=c("ID Fiche"="ID Fiche"))
-levag_equip_parent <- levag_equip_valide %>%
+levag_equip <- levag_equip_valide %>%
   left_join(standards_equip, by=c("Standard d'équipement"="description")) %>%
   left_join(batiments_import, by=c("Local no"="c_porte")) %>%
   transmute("#eq.eq_id" = eq_id,
@@ -363,7 +363,6 @@ levag_equip_parent <- levag_equip_valide %>%
             comments = Remarques)
 
 
-levag_equip <- rbind(leva_equip , levag_equip_parent)
 
 write_archibus(levag_equip, "./01.eq-LEVAG.xlsx",
                table.header = "Equipment",
@@ -563,32 +562,39 @@ sv_equip <- read_excel(FacSV_file, "ARCHIBUS FSV",col_names = TRUE, col_types = 
   mutate(`Code équipement` = sub("FSV", "FSVIE", `Code équipement`)) %>%
   mutate(CF4 = as.double(CF4))
 
+sti_equip <- read_excel(FacSV_file, "ARCHIBUS FSTI",col_names = TRUE, col_types = NULL, na = "", skip = 1) %>%
+  mutate(`Code équipement` = sub("FSV", "FSVIE", `Code équipement`)) %>%
+  mutate(CF4 = as.double(CF4))
 
-dp <- read_excel("./export DP.xlsx")
+sv_sti_equip = rbind(sv_equip,sti_equip)
 
-sv_equip_parent <- sv_equip %>%
-  left_join(standards_equip, by=c("Standard ID"="#eqstd.eq_std")) %>%
+#dp <- read_excel("./export DP.xlsx")
+
+sv_equip_parent <- sv_sti_equip %>%
+#  left_join(standards_equip, by=c("Standard ID"="#eqstd.eq_std")) %>%
 #  left_join(batiments_import, by=c("Local"="c_porte")) %>%
-  left_join(dp, by=c(CF4="dp_id")) %>%
-  transmute("#eq.eq_id" = eq_id,
-            eq_std = ifelse(is.na(`#eqstd.eq_std`), "A DEFINIR", `#eqstd.eq_std`),
+#  left_join(dp, by=c(CF4="dp_id")) %>%
+  transmute("#eq.eq_id" = `Code équipement`,
+            eq_std = `Standard ID`,
             bl_id = `# Bâtiment`,
             fl_id = `# Etage`,
             rm_id = `# Local`,
             site_id = "E",
-            description = `Modèle`,
-            dv_id = dv_id,
+            description = `Description de l'équipement`,
+            dv_id = CF2,
             dp_id = CF4,
-            num_serial = `N° série`,
+            num_serial = `Numéro de série`,
             subcomponent_of ="",
             mfr = Fabricant,
-            asset_id = `N° d'équipment`,
-            status = ifelse(`Statut...22` != "Non conforme", "in", "out"),
+            asset_id = `N°du modèle`,
+            status = ifelse(is.na(`Statut`), "out", "in"),
             condition = "fair",
             #            date_in_service = `Mise en service`,
-            comments = "")
+            comments = ifelse( is.na(`Commentaires 1`) ,"", ifelse(is.na(`Commentaires 2`) ,`Commentaires 1`,paste(`Commentaires 1`,`Commentaires 2`,sep =" - "))),
+            cost_purchase =  ifelse(is.na(`Prix d'Achat`),"",round(as.numeric(`Prix d'Achat`), digits = 2)),
+            date_purchased = ifelse(is.na(`Date d'achat`),"",format(as.Date(`Date d'achat`,"%d.%m.%Y"), format="%Y-%m-%d")))
 
-write_archibus(sv_equip_parent, "./01.eq-FSV.xlsx",
+write_archibus(sv_equip_parent, "./01.eq-FACSV.xlsx",
                table.header = "Equipment",
                sheet.name = "Equipment")
 
@@ -709,9 +715,11 @@ ass_attrib[nrow(ass_attrib)+1,] <- c("IMAGE","Image Source","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("ORIGINALE","Originale","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("ORIGINALE","Originale","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("PRIX","Prix","","Equipment")
-ass_attrib[nrow(ass_attrib)+1,] <- c("VALEUR","Valeur d'acquisition","","Equipment")
+
 ass_attrib[nrow(ass_attrib)+1,] <- c("NIVEAUSECU","Niveau Sécurité","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("FOURNISSEUR","Fournisseur","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("SIGLELABO","Sigle du Labo","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("CONTACTLABO","Contact du Labo","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("SF6","SF6 (kg)","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("NOMBREDEMANŒUVRESMAX","Nombre de manœuvres max","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("TRANFORMATEURINTENSITE","Tranformateur d'intensité","","Equipment")
@@ -1599,23 +1607,37 @@ eq_ass_attribut_mob_quantite <- mob_equip_acc0 %>%
 
 # SV
 
-eq_ass_attribut_valeur <- sv_equip %>%
-  filter (`Valeur d'acquisition` != "") %>%
-  transmute("#eq_asset_attribute.eq_id" = eq_id,
-            "asset_attribute_std" = "VALEUR",
-            value = `Valeur d'acquisition`)
 
-eq_ass_attribut_niveausecu <- sv_equip %>%
-  filter (`Niveau Sécurité` != "") %>%
-  transmute("#eq_asset_attribute.eq_id" = eq_id,
-            "asset_attribute_std" = "NIVEAUSECU",
-            value = `Niveau Sécurité`)
 
-eq_ass_attribut_fournisseur <- sv_equip %>%
+eq_ass_sv_attribut_fournisseur <- sv_sti_equip %>%
   filter (`Fournisseur` != "") %>%
-  transmute("#eq_asset_attribute.eq_id" = eq_id,
+  transmute("#eq_asset_attribute.eq_id" = `Code équipement`,
             "asset_attribute_std" = "FOURNISSEUR",
             value = `Fournisseur`)
+
+eq_ass_sv_attribut_niveausecu <- sv_sti_equip %>%
+  filter (`BioSafety Level` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = `Code équipement`,
+            "asset_attribute_std" = "NIVEAUSECU",
+            value = `BioSafety Level`)
+
+eq_ass_sv_attribut_siglelabo <- sv_sti_equip %>%
+  filter (`Sigle du Labo` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = `Code équipement`,
+            "asset_attribute_std" = "SIGLELABO",
+            value = `Sigle du Labo`)
+
+eq_ass_sv_attribut_contactlabo <- sv_sti_equip %>%
+  filter (`Contact 1 du Labo` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = `Code équipement`,
+            "asset_attribute_std" = "CONTACTLABO",
+            value = `Contact 1 du Labo`)
+
+eq_ass_sv_attribut_nosap <- sv_sti_equip %>%
+  filter (`N°SAP` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = `Code équipement`,
+            "asset_attribute_std" = "NOSAP",
+            value = `N°SAP`)
 
 # Atttibuts Cellules MT
 
@@ -1963,9 +1985,12 @@ eq_ass_attribut <- rbind(
 #                         eq_ass_attribut_image,
 #                         eq_ass_attribut_originale,
 #                         eq_ass_attribut_prix,
-#                         eq_ass_attribut_valeur,
-#                         eq_ass_attribut_niveausecu,
-#                         eq_ass_attribut_fournisseur
+                          eq_ass_attribut_valeur,
+                          eq_ass_sv_attribut_fournisseur,
+                          eq_ass_sv_attribut_niveausecu,
+                          eq_ass_sv_attribut_siglelabo,
+                          eq_ass_sv_attribut_contactlabo,
+                          eq_ass_sv_attribut_nosap,
                           eq_ass_attribut_mt_numesti,
 eq_ass_attribut_mt_type,
 eq_ass_attribut_mt_sf6,
