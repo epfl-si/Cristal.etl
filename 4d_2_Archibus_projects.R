@@ -12,10 +12,10 @@ library("stringr")
 options(scipen = 999)   
 #setwd("/Users/venries/GitHub/Cristal")
 
-Missions4D_file = "./4DMissions_06.05.2022.csv"
-Devis4D_file = "./4DDevisCFC_09.05.2022.csv"
-Tresoreries4D_file="./4DTresoreries_06.05.2022.csv"
-Revue4D_file="./4DRevuesProjets_06.05.2022.csv"
+Missions4D_file = "./4DMissions_13.06.2022.csv"
+Devis4D_file = "./4DDevisCFC_13.06.2022.csv"
+Tresoreries4D_file="./4DTresoreries_13.06.2022.csv"
+Revue4D_file="./4DRevuesProjets_13.06.2022.csv"
 
 A1 <- function(row, col) {
     #' Convert real-world (integer) coordinates to Excel®-style A1 notation.
@@ -55,7 +55,8 @@ write_archibus <- function(data, filename, table.header, sheet.name = "sheet1") 
     )
     coldate <- list(
       '13' = csDate,
-      '14' = csDate
+      '14' = csDate,
+      '20' = csDate
     )
 
     xlsx::addDataFrame(data.frame(data, check.names = FALSE), sheet,
@@ -83,7 +84,7 @@ toArchibusStatus <- function(etat) {
               TRUE                ~ "")
 }
 
-mission_import <- fread(file = Missions4D_file  , encoding = "Latin-1") %>%
+mission_import  <- fread(file = Missions4D_file  , encoding = "Latin-1") %>%
   filter (Etat != "") %>% ## Seulement si la Etat est reseigné
   mutate(CFNo = ifelse(is.na(CFNo), 0, CFNo)) %>% ## remplace NA par 0 fabs CFNo
   mutate(BatimentID = replace(`Bât.`, `Bât.` == "ZZ", "ZE")) %>% ## remplace ZZ par ZE dans BatimentID
@@ -95,7 +96,8 @@ mission_import <- fread(file = Missions4D_file  , encoding = "Latin-1") %>%
   mutate(FullNameCP = tolower(`CP Nom`)) %>%
   mutate(CP = as.numeric(`CP SCIPER`)) %>%
   mutate(Début = as.Date(replace(Début, Début == "00.00.00", NA),"%d.%m.%Y")) %>%
-  mutate(Remise = as.Date(replace(Remise, Remise == "00.00.00", NA),"%d.%m.%Y"))
+  mutate(Remise = as.Date(replace(Remise, Remise == "00.00.00", NA),"%d.%m.%Y")) %>%
+  mutate(Datemission = as.Date(replace(`Date mission`, `Date mission` == "00.00.00", NA),"%d.%m.%Y"))
 
 batiments_import <- read_excel("./Export Bâtiments.xlsx")
 
@@ -144,11 +146,13 @@ mission_archibus <-
             proj_mgr =ifelse(is.na(`#em.em_idcp`), `#em.em_idc2`, `#em.em_idcp`),
             scope=`CF infos`,
             benefit=Justificatif,
-            contact_id="TBD")
+            contact_id="TBD",
+            date_created=Datemission)
   
 write_archibus(mission_archibus, "./01_projects.xlsx",
                table.header = "Activity Projects",
                sheet.name = "4d_projects")
+
 
 #=================================
 #  Action Items
@@ -178,7 +182,8 @@ revue_import <- fread(file = Revue4D_file, encoding = "Latin-1") %>%
             status = "PLANNED",
             action_title = "Budget initial du projet repris de 4D",
             source_type = "EPFL",
-            ar_is_change_order = 'No') %>%
+            ar_is_change_order = 'No',
+            cost_act_cap ="") %>%
   mutate(cost_est_cap=as.numeric(cost_est_cap),
          cost_est_design_cap=as.numeric(cost_est_design_cap))
 
@@ -194,13 +199,47 @@ actionItems <- devis_import %>%
             date_scheduled = ifelse(is.na(Année),"",paste(Année,"-01-01",sep = "")),
             project_id = `ID Mission`,
             status = "PLANNED",
-            action_title = Travaux,
+            action_title = paste("Buget initial repris 4D - ", Travaux, sep = ""),
             source_type = ifelse(substr(CFC,1,1) =="3" | substr(CFC,1,1) == "9", "EPFL", "BBL"),
-            ar_is_change_order = 'No') %>%
+            ar_is_change_order = 'No',
+            cost_act_cap ="") %>%
   mutate(cost_est_cap=as.numeric(cost_est_cap),
          cost_est_design_cap=as.numeric(cost_est_design_cap))
 
-actionItems_final <- rbind(actionItems, revue_import)
+tresoreries_import_since_2022_BBL <- fread(file = Tresoreries4D_file  , encoding = "Latin-1") %>%
+#  filter(`Année` > 2021) %>%
+  filter(`Montant BBL` > 0) %>%
+  transmute("#activity_log.activity_log_id" = "",
+            activity_type = "PROJECT - COST",
+            cost_est_cap = "",
+            cost_est_design_cap = "",
+            csi_id = "799",
+            date_scheduled = ifelse(is.na(`Année`),"",paste(`Année`,"-01-01",sep = "")),
+            project_id = `ID Mission`,
+            status = "PLANNED",
+            action_title = "Atterrissage repris 4D",
+            source_type = "BBL",
+            ar_is_change_order = 'No',
+            cost_act_cap = `Montant BBL`)
+
+tresoreries_import_since_2022_EPFL <- fread(file = Tresoreries4D_file  , encoding = "Latin-1") %>%
+#  filter(`Année` > 2021) %>%
+  filter(`Montant EPFL` != 0) %>%
+  transmute("#activity_log.activity_log_id" = "",
+             activity_type = "PROJECT - COST",
+             cost_est_cap = "",
+             cost_est_design_cap = "",
+             csi_id = "999",
+             date_scheduled = ifelse(is.na(`Année`),"",paste(`Année`,"-01-01",sep = "")),
+             project_id = `ID Mission`,
+             status = "PLANNED",
+             action_title = "Atterrissage repris 4D",
+             source_type = "EPFL",
+             ar_is_change_order = 'No',
+             cost_act_cap =  `Montant EPFL`)
+
+
+actionItems_final <- rbind(actionItems, revue_import, tresoreries_import_since_2022_BBL, tresoreries_import_since_2022_EPFL)
 
 
 write_archibus(actionItems_final, "./04_ActionItems.xlsx",
@@ -208,3 +247,49 @@ write_archibus(actionItems_final, "./04_ActionItems.xlsx",
                sheet.name = "4d_projects")
 
 
+
+#=================================
+#  Project Funds
+#=================================
+
+mission_import_last_credit_BBL <- mission_import %>%
+  filter((`Dernier Crédit BBL`!="")) %>%
+  transmute("ID Mission" = `ID Mission`,
+            "Dernier Credit" = `Dernier Crédit BBL`)
+
+devis_EPFL <-devis_import %>%
+  filter(`Montant EPFL` != 0) %>%
+  filter(substr(CFC,1,1) =="3" | substr(CFC,1,1) == "9" ) %>%
+  group_by(`ID Mission`) %>% 
+  summarise(Montant = sum(`Montant EPFL`)) %>%
+  left_join(tresoreries_import,by=c("ID Mission"="ID Mission")) %>%
+  left_join(mission_import_last_credit_EPFL,by=c("ID Mission"="ID Mission"))
+devis_EPFL$type = "EPFL-TBD"
+
+mission_import_last_credit_EPFL <- mission_import %>%
+  filter((`Dernier Crédit EPFL`!="")) %>%
+  transmute("ID Mission" = `ID Mission`,
+            "Dernier Credit" = `ID Mission`)
+
+devis_BBL <-devis_import %>% 
+  filter(`Montant BBL` != 0) %>%
+  filter(substr(CFC,1,1) !="3" & substr(CFC,1,1) != "9" | is.na(CFC)) %>%
+  group_by(`ID Mission`) %>% 
+  summarise(Montant = sum(`Montant BBL`))  %>%
+  left_join(tresoreries_import,by=c("ID Mission"="ID Mission")) %>%
+  left_join(mission_import_last_credit_BBL,by=c("ID Mission"="ID Mission")) 
+devis_BBL$type = "BBL-TBD"
+
+devis <- rbind(devis_EPFL,devis_BBL)
+
+projectfunds_final <- devis %>%
+  transmute("#projfunds.project_id" = `ID Mission`,
+            "fund_id" = type,
+            "fiscal_year" = `Année`,
+            "projfunds.ar_sap_fund_ref" = `Dernier Credit`,
+            "amount_cap" = Montant,
+            "description" = "")
+
+write_archibus(projectfunds_final, "./03_ProjectFunds.xlsx",
+               table.header = "Project Funds",
+               sheet.name = "4d_projects")
