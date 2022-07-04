@@ -158,7 +158,7 @@ write_archibus(mission_archibus, "./01_projects.xlsx",
 #  Action Items
 #=================================    
 devis_import <- fread(file = Devis4D_file  , encoding = "Latin-1") %>%
-  mutate(CFC=str_replace_all(devis_import$CFC,"[ *]|[.]$","")) 
+  mutate(CFC=str_replace_all(CFC,"[ *]|[.]$",""))
 #  mutate(as.numeric(`Montant EPFL`)) %>%
 #  mutate(`Montant BLL` = format(as.numeric(`Montant BBL`,scientific = FALSE)))
 
