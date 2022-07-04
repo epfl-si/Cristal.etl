@@ -252,6 +252,11 @@ write_archibus(actionItems_final, "./04_ActionItems.xlsx",
 #  Project Funds
 #=================================
 
+mission_import_last_credit_EPFL <- mission_import %>%
+  filter((`Dernier Crédit EPFL`!="")) %>%
+  transmute("ID Mission" = `ID Mission`,
+            "Dernier Credit" = `ID Mission`)
+
 mission_import_last_credit_BBL <- mission_import %>%
   filter((`Dernier Crédit BBL`!="")) %>%
   transmute("ID Mission" = `ID Mission`,
@@ -265,11 +270,6 @@ devis_EPFL <-devis_import %>%
   left_join(tresoreries_import,by=c("ID Mission"="ID Mission")) %>%
   left_join(mission_import_last_credit_EPFL,by=c("ID Mission"="ID Mission"))
 devis_EPFL$type = "EPFL-TBD"
-
-mission_import_last_credit_EPFL <- mission_import %>%
-  filter((`Dernier Crédit EPFL`!="")) %>%
-  transmute("ID Mission" = `ID Mission`,
-            "Dernier Credit" = `ID Mission`)
 
 devis_BBL <-devis_import %>% 
   filter(`Montant BBL` != 0) %>%
