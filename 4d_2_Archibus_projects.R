@@ -208,7 +208,7 @@ actionItems <- devis_import %>%
 
 tresoreries_import_since_2022_BBL <- fread(file = Tresoreries4D_file  , encoding = "Latin-1") %>%
 #  filter(`Année` > 2021) %>%
-  filter(`Montant BBL` > 0) %>%
+  filter(`Montant BBL` != 0) %>%
   transmute("#activity_log.activity_log_id" = "",
             activity_type = "PROJECT - COST",
             cost_est_cap = "",
