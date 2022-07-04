@@ -12,10 +12,10 @@ library("stringr")
 options(scipen = 999)   
 #setwd("/Users/venries/GitHub/Cristal")
 
-Missions4D_file = "./4DMissions_13.06.2022.csv"
-Devis4D_file = "./4DDevisCFC_13.06.2022.csv"
-Tresoreries4D_file="./4DTresoreries_13.06.2022.csv"
-Revue4D_file="./4DRevuesProjets_13.06.2022.csv"
+Missions4D_file = "./4DMissions_06.05.2022.csv"
+Devis4D_file = "./4DDevisCFC_06.05.2022.csv"
+Tresoreries4D_file="./4DTresoreries_06.05.2022.csv"
+Revue4D_file="./4DRevuesProjets_06.05.2022.csv"
 
 A1 <- function(row, col) {
     #' Convert real-world (integer) coordinates to Excel®-style A1 notation.
@@ -103,7 +103,7 @@ batiments_import <- read_excel("./Export Bâtiments.xlsx")
 
 dp <- read_excel("./export DP.xlsx")
          
-em <- read_excel("./em.xlsx", skip = 1)  %>%
+em <- read_excel("./em2.xlsx", skip = 1)  %>%
   mutate(FullName = tolower(paste(name_last, name_first)) ) %>%
 #  mutate(sciper = as.numeric(gsub(".*- ","",em_id)))
   mutate(sciper = as.numeric(em_number))
