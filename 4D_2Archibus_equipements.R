@@ -2,20 +2,22 @@ library(tidyverse)
 library(readxl)
 library(dplyr)
 library("data.table")
+#library(sqldf)
 
+ID_file = "./2022-07-01 - Liste Equipements Cristal Test.xlsx"
 Domaine_file = "./Données de référence.xlsx"
-Equi_grpeA_file = "./Equipements_gpeA_final.xlsx"
-Equi_grpeB_file = "./Equipements_gpeB_v2.xlsx"
-Equi_grpeC_file = "./Import_equipmt_22-05-23_v3.xlsx"
-Venti_file = "./VEN_Installations_13.04.2022.csv"
-Venti_Acc_file = "./VEN_Accessoires_16.05.2022.csv"
-Elec_file  = "./ELE_Installations_13.04.2022.csv"
-Mt_file = "./UTILI_Cellules MT_v02.xlsx"
-Utils_file = "./UTILI_GE_air_chaleur_v01.xlsx"
+Equi_grpeA_file = "./Equipements_gpeA_final_v2.xlsx"
+Equi_grpeB_file = "./Equipements_gpeB_v4.xlsx"
+Equi_grpeC_file = "./Import_equipmt_22-05-23_v4.xlsx"
+Venti_file = "./VEN_Installations_04.07.2022.csv"
+Venti_Acc_file = "./VEN_Accessoires_27.06.2022.csv"
+Elec_file  = "./ELE_Installations_04.07.2022.csv"
+Mt_file = "./UTILI_Cellules MT_v03.xlsx"
+Utils_file = "./UTILI_GE_air_chaleur_v02.xlsx"
 FacSV_file = "./Liste_équipement_à_importer.xlsx"
 GMAO_file = "./GMAO_4D_Export2021_MAPPING_eqstd.xlsx"
 GMAO_Acc_file = "./4D_GMAO_Accessoires_avec UUID_4-3-22.xlsx"
-ELA_Ascenseurs_file = "./ELA_ascenseurs.xlsx"
+ELA_Ascenseurs_file = "./LEVAG_ascenseurs_22-05-10.xlsx"
 SV_file = "./Maintenance _Equipements_INFRA_SV_4D.xlsx"
 
 A1 <- function(row, col) {
@@ -103,6 +105,9 @@ write_archibus(standards_equip, "./00.eqstd.xlsx",
 
 site_import <- read_excel("./Export Bâtiments.xlsx")
 
+id_archibus <- read_excel(ID_file, range = cell_cols("A:B"))
+
+
 batiments_import <- read_excel("./06. rm.xlsx","Sheet1",col_names = TRUE, col_types = NULL, na = "", skip = 1) %>%
   left_join(site_import, by=c("#rm.bl_id"="Building Code"))
 
@@ -177,12 +182,12 @@ ven_valideA <- read_excel(Equi_grpeA_file, "VENTIL",col_names = TRUE, col_types 
 ven_valideA$eq_id <-paste("VENTI-00000-",formatC(seq.int(nrow(ven_valideA)), width=6, flag=0, format="d"),sep = "")
 ven_valideA$UUID <- NA
 
-ven_valideBVenti <- read_excel(Equi_grpeB_file, "Feuil 1",col_names = TRUE, col_types = NULL, na = "") %>%
+ven_valideBVenti <- read_excel(Equi_grpeB_file, "Feuil1",col_names = TRUE, col_types = NULL, na = "") %>%
   filter (`Domaine technique` == "VENTIL") %>%
   mutate(`Domaine technique` = recode(`Domaine technique`, VENTIL = 'Ventilation' ))
 ven_valideBVenti$eq_id <-paste("VENTI-00000-",formatC(seq.int(nrow(ven_valideBVenti)) + nrow(ven_valideA), width=6, flag=0, format="d"),sep = "")
 
-ven_valideBMobil <- read_excel(Equi_grpeB_file, "Feuil 1",col_names = TRUE, col_types = NULL, na = "") %>%
+ven_valideBMobil <- read_excel(Equi_grpeB_file, "Feuil1",col_names = TRUE, col_types = NULL, na = "") %>%
   filter (`Domaine technique` == "MOBIL") %>%
   filter (`Standard d'équipement` != "") %>%
   mutate(`Domaine technique` = recode(`Domaine technique`, VENTIL = 'Mobilier labo' ))
@@ -204,16 +209,16 @@ ven_valideBbis <- ven_valideBbis[-c(7:8)]
 ven_valideA$`# local`<- NA
 ven_valideA$parent_eq_id <- NA
 
-ven_valideCVenti <- read_excel(Equi_grpeC_file, "VEN_Accessoires",col_names = TRUE, col_types = NULL, na = "") %>%
-  left_join(standards_equip,by=c("Standard d'équipement"="#eqstd.eq_std")) %>%
-  mutate(`Domaine technique` = recode(`category`, VENTILATION = 'Ventilation' ))
-ven_valideCVenti$category <- NULL
-ven_valideCVenti$"Standard d'équipement" <- NULL
-ven_valideCVenti$eq_id <-paste("VENTI-00000-",formatC(seq.int(nrow(ven_valideCVenti)) + nrow(ven_valideB), width=6, flag=0, format="d"),sep = "")
-ven_valideCVenti <- ven_valideCVenti %>%
-  left_join(ven_valideB %>%
-              transmute(`ID Fiche`, parent_eq_idA = eq_id), by=c("ID Fiche"="ID Fiche" )) %>%
-  mutate(parent_eq_id = parent_eq_idA) 
+#ven_valideCVenti <- read_excel(Equi_grpeC_file, "VEN_Accessoires",col_names = TRUE, col_types = NULL, na = "") %>%
+#  left_join(standards_equip,by=c("Standard d'équipement"="#eqstd.eq_std")) %>%
+#  mutate(`Domaine technique` = recode(`category`, VENTILATION = 'Ventilation' ))
+#ven_valideCVenti$category <- NULL
+#ven_valideCVenti$"Standard d'équipement" <- NULL
+#ven_valideCVenti$eq_id <-paste("VENTI-00000-",formatC(seq.int(nrow(ven_valideCVenti)) + nrow(ven_valideA) + nrow(ven_valideBVenti), width=6, flag=0, format="d"),sep = "")
+#ven_valideCVenti <- ven_valideCVenti %>%
+#  left_join(ven_valideB %>%
+#              transmute(`ID Fiche`, parent_eq_idA = eq_id), by=c("ID Fiche"="ID Fiche" )) %>%
+#  mutate(parent_eq_id = parent_eq_idA) 
 
 
 
@@ -226,7 +231,7 @@ ven_valideCVenti <- read_excel(Equi_grpeC_file, "VEN_Accessoires",col_names = TR
 ven_valideCVenti$category <- NULL
 ven_valideCVenti$"Standard d'équipement" <- NULL
 ven_valideCVenti <- ven_valideCVenti %>% rename("Standard d'équipement"=description)
-ven_valideCVenti$eq_id <-paste("VENTI-00000-",formatC(seq.int(nrow(ven_valideCVenti)) + nrow(ven_valideB), width=6, flag=0, format="d"),sep = "")
+ven_valideCVenti$eq_id <-paste("VENTI-00000-",formatC(seq.int(nrow(ven_valideCVenti)) + nrow(ven_valideA) + nrow(ven_valideBVenti), width=6, flag=0, format="d"),sep = "")
 ven_valideCVenti <- ven_valideCVenti %>%
   left_join(ven_valide_A_B %>%
               filter(is.na(parent_eq_id)) %>%
@@ -259,7 +264,7 @@ ven_equip_parent <- ven_equip_valide %>%
             fl_id = ifelse(is.na(`# local`),`fl_id`, `fl_id_2`),
             rm_id = ifelse(is.na(`# local`),`rm_id`, `rm_id_2`),
             site_id = SiteCode,
-            description = Nom,
+            description = ifelse(is.na(parent_eq_id),Nom,Description),
             dv_id = 11500,
             dp_id = "0047",
             num_serial = "",
@@ -270,9 +275,12 @@ ven_equip_parent <- ven_equip_valide %>%
             modelno = ifelse(is.na(parent_eq_id),`Monobloc No`,""),
             condition = "fair",
             comments = ifelse(is.na(parent_eq_id),Remarques.x,paste(Remarques.y,"\n",Intervention,sep="")),
-            date_in_service = `Mise en service`)
+            date_in_service = ifelse(is.na(parent_eq_id),`Mise en service.x`,`Mise en service.y`)) %>%
+  mutate(date_in_service = as.Date(replace(date_in_service, date_in_service == "00.00.00", NA),"%d.%m.%Y"))
 
-
+#write_archibus(ven_equip_valide, "./000.tmp.xlsx",
+#               table.header = "Equipment",
+#               sheet.name = "Equipment")
 write_archibus(ven_equip_parent, "./01.eq-VENTI.xlsx",
                table.header = "Equipment",
                sheet.name = "Equipment")
@@ -346,46 +354,46 @@ write_archibus(ven_equip_parent, "./01.eq-VENTI.xlsx",
 #############################################
 
 
-#leva_equip0 <- read_excel(ELA_Ascenseurs_file, "Inventaire ascenseurs",col_names = TRUE, col_types = NULL, na = "", skip = 0) %>%
-#  filter (`Migrer` == "Oui") 
-#leva_equip0$eq_id <-paste("LEVAG-00000-",formatC(seq.int(nrow(leva_equip0)), width=6, flag=0, format="d"),sep = "")
+leva_equip0 <- read_excel(ELA_Ascenseurs_file, "Inventaire ascenseurs",col_names = TRUE, col_types = NULL, na = "", skip = 1) 
 
-#leva_equip <- leva_equip0 %>%
-#  left_join(standards_equip, by=c("Domaine technique"="description")) %>%
-#  left_join(batiments_import, by=c("Local"="c_porte")) %>%
-#  transmute("#eq.eq_id" = eq_id,
-#            eq_std = "ASCENSEUR",
-#            bl_id = `#rm.bl_id`,
-#            fl_id = fl_id,
-#            rm_id = rm_id,
-#            site_id = SiteCode,
-#            description = Type,
-#            dv_id = 11500,
-#            dp_id = "0047",
-#            num_serial = "",
-#            modelno = `No installation`,
-#            subcomponent_of ="",
-#            mfr = Marque,
-#            asset_id = paste(`ID Fiche (table Electricité)`,`UUID (table Acsenseurs)`,sep =" - "),
-#            status = "in",
-#            condition = "fair",
-#            comments = Remarques)
+leva_equip0$eq_id <-paste("LEVAG-00000-",formatC(seq.int(nrow(leva_equip0)), width=6, flag=0, format="d"),sep = "")
+
+leva_equip <- leva_equip0 %>%
+  left_join(standards_equip, by=c("Standard d'équipement"="description")) %>%
+  left_join(batiments_import, by=c("# Local"="c_porte")) %>%
+  transmute("#eq.eq_id" = eq_id,
+            eq_std = `#eqstd.eq_std`,
+            bl_id = `#rm.bl_id`,
+            fl_id = fl_id,
+            rm_id = rm_id,
+            site_id = SiteCode,
+            description = Description,
+            dv_id = 11500,
+            dp_id = "0047",
+            num_serial = "",
+            modelno = `N° du Modèle`,
+            subcomponent_of ="",
+            mfr = Fabricant,
+            asset_id = paste(`ID Fiche (table Electricité)`,`UUID (table Acsenseurs)`,sep =" - "),
+            status = "in",
+            condition = "fair",
+            comments = "",
+            date_in_service = `Date d’Installation`) 
+#  mutate(date_in_service = as.Date(replace(date_in_service, date_in_service == "00.00.00", NA),"%Y-%m.%d"))
 
 ############################################
 # LEVAGE AUTRE
 ############################################
 
-#########
-# ATTENTION : VERIFIER LEVAGE ASSENCEUR !
-#########
+
 levag_valide <- read_excel(Equi_grpeA_file, "ELECT-LEVAG",col_names = TRUE, col_types = NULL, na = "") %>%
   filter (`Domaine technique` == "Levage")
-levag_valide$eq_id <-paste("LEVAG-00000-",formatC(seq.int(nrow(levag_valide)), width=6, flag=0, format="d"),sep = "")
+levag_valide$eq_id <-paste("LEVAG-00000-",formatC(seq.int(nrow(levag_valide)) + nrow(leva_equip0), width=6, flag=0, format="d"),sep = "")
 Elec_equip0 <- fread(file = Elec_file  , encoding = "Latin-1") 
   
 levag_equip_valide <- levag_valide %>%
   left_join(Elec_equip0, by=c("ID Fiche"="ID Fiche"))
-levag_equip <- levag_equip_valide %>%
+levag_equip2 <- levag_equip_valide %>%
   left_join(standards_equip, by=c("Standard d'équipement"="description")) %>%
   left_join(batiments_import, by=c("Local no"="c_porte")) %>%
   transmute("#eq.eq_id" = eq_id,
@@ -405,11 +413,12 @@ levag_equip <- levag_equip_valide %>%
             status = toArchibusStatus(`HS?`),
             condition = "fair",
             comments = Remarques,
-            date_in_service = `Mise en service`)
+            date_in_service = `Mise en service`) %>%
+  mutate(date_in_service = as.Date(replace(date_in_service, date_in_service == "00.00.00", NA),"%d.%m.%Y"))
 
+levag <- rbind(leva_equip, levag_equip2)
 
-
-write_archibus(levag_equip, "./01.eq-LEVAG.xlsx",
+write_archibus(levag, "./01.eq-LEVAG.xlsx",
                table.header = "Equipment",
                sheet.name = "Equipment")
 
@@ -447,7 +456,8 @@ ele_equip_parent <- ele_equip_valide %>%
             status = toArchibusStatus(`HS?`),
             condition = "fair",
             comments = Remarques,
-            date_in_service = `Mise en service`)
+            date_in_service = `Mise en service`) %>%
+  mutate(date_in_service = as.Date(replace(date_in_service, date_in_service == "00.00.00", NA),"%d.%m.%Y"))
 
 
 elect2 <- read_excel(Equi_grpeC_file, "ELE_Installations",col_names = TRUE, col_types = NULL, na = "") %>%
@@ -479,7 +489,8 @@ ele_equip_elect2 <- elect2 %>%
             asset_id = `ID Fiche`,
             status = toArchibusStatus(`HS?`),
             condition = "fair",
-            comments = Remarques)
+            comments = Remarques,
+            date_in_service ="")
 
 ele_equip <- rbind(ele_equip_parent, ele_equip_elect2)
 
@@ -532,7 +543,7 @@ write_archibus(ele_equip, "./01.eq-ELECT.xlsx",
 #############################################
 
 
-mt_equip0 <- read_excel(Mt_file, "Cellules MT",col_names = TRUE, col_types = NULL, na = "", skip = 1)
+mt_equip0 <- read_excel(Mt_file, "Cellules MT v3",col_names = TRUE, col_types = NULL, na = "", skip = 1)
 mt_equip0$eq_id <-paste("UTILI-00000-",formatC(seq.int(nrow(mt_equip0)), width=6, flag=0, format="d"),sep = "")
 
 mt_equip0bis <- mt_equip0 %>%
@@ -561,8 +572,8 @@ mt_equip <- mt_equip0bis %>%
             asset_id = ID,
             status = "in",
             condition = "fair",
-            comments = "")
-
+            comments = "",
+            date_in_service = `Date d’Installation`)
 
 
 util1 <- read_excel(Utils_file, "GES, citerne",col_names = TRUE, col_types = NULL, na = "", skip = 2)
@@ -590,15 +601,39 @@ util1_equip <- util1 %>%
             asset_id = ID,
             status = "in",
             condition = "fair",
-            comments = "")
+            comments = "",
+            date_in_service = `Date d’Installation`)
 
 util2 <- read_excel(Utils_file, "Compresseur air",col_names = TRUE, col_types = NULL, na = "", skip = 1)
 util2$eq_id <-paste("UTILI-00000-",formatC(seq.int(nrow(util2)) + nrow(mt_equip0) + nrow(util1), width=6, flag=0, format="d"),sep = "")
 
 
+
+
+
+util2_equip <- util2 %>%
+  left_join(batiments_import, by=c("# Local"="c_porte")) %>%
+  transmute("#eq.eq_id" = eq_id,
+            eq_std = `Standard d'équipement`,
+            bl_id = `#rm.bl_id`,
+            fl_id = fl_id,
+            rm_id = rm_id,
+            site_id = SiteCode,
+            description = `Modèle`,
+            dv_id = 11500,
+            dp_id = "0047",
+            num_serial = `Numéro de série`,
+            modelno = "",
+            subcomponent_of = "",
+            mfr = Fabricant,
+            asset_id = `ID / UUID`,
+            status = "in",
+            condition = "fair",
+            comments = "",
+            date_in_service = `Date d’Installation`)
+
 util3 <- read_excel(Utils_file, "Chaudière gaz",col_names = TRUE, col_types = NULL, na = "", skip = 1)
 util3$eq_id <-paste("UTILI-00000-",formatC(seq.int(nrow(util3)) + nrow(mt_equip0) + nrow(util1) + nrow(util2), width=6, flag=0, format="d"),sep = "")
-
 
 util3_equip <- util3 %>%
   left_join(batiments_import, by=c("# Local"="c_porte")) %>%
@@ -618,7 +653,8 @@ util3_equip <- util3 %>%
             asset_id = `ID / UUID`,
             status = "in",
             condition = "fair",
-            comments = "")
+            comments = "",
+            date_in_service = `Date d’Installation`)
 
 util4 <- read_excel(Equi_grpeC_file, "ELE_Installations",col_names = TRUE, col_types = NULL, na = "") %>%
   filter (`Standard d'équipement` == "TGBT") %>%
@@ -646,11 +682,13 @@ util4_equip <- util4 %>%
             asset_id = `ID Fiche`,
             status = toArchibusStatus(`HS?`),
             condition = "fair",
-            comments = Remarques)
+            comments = Remarques,
+            date_in_service = `Mise en service`) %>%
+  mutate(date_in_service = as.Date(replace(date_in_service, date_in_service == "00.00.00", NA),"%d.%m.%Y"))
 
 
 
-util=rbind(mt_equip, util1_equip, util2_equip, util3_equip, util3_equip)
+util=rbind(mt_equip, util1_equip, util2_equip, util3_equip, util4_equip)
 
 write_archibus(util, "./01.eq-UTILI.xlsx",
                table.header = "Equipment",
@@ -664,62 +702,62 @@ write_archibus(util, "./01.eq-UTILI.xlsx",
 
 # MOB Parents
 
-mob_equip0 <- read_excel(GMAO_file, "MobLABO_tout",col_names = TRUE, col_types = NULL, na = "", skip = 1) %>%
-  filter(grepl('ok',Remarques,ignore.case=TRUE))
+#mob_equip0 <- read_excel(GMAO_file, "MobLABO_tout",col_names = TRUE, col_types = NULL, na = "", skip = 1) %>%
+#  filter(grepl('ok',Remarques,ignore.case=TRUE))
 
-mob_equip0$eq_id <-paste("MOB-00000-",formatC(seq.int(nrow(mob_equip0)), width=6, flag=0, format="d"),sep = "")
+#mob_equip0$eq_id <-paste("MOB-00000-",formatC(seq.int(nrow(mob_equip0)), width=6, flag=0, format="d"),sep = "")
 
-mob_equip_parent <- mob_equip0 %>%
-  left_join(standards_equip, by=c("STANDARD D'EQUIPEMENT"="description")) %>%
-  left_join(batiments_import, by=c("Local no"="c_porte")) %>%
-  transmute("#eq.eq_id" = eq_id,
-            eq_std = ifelse(is.na(`#eqstd.eq_std`), "A DEFINIR", `#eqstd.eq_std`),
-            bl_id = `#rm.bl_id`,
-            fl_id = fl_id,
-            rm_id = rm_id,
-            site_id = SiteCode,
-            description = Nom,
-            dv_id = 11500,
-            dp_id = "0047",
-            num_serial = `No de série`,
-            subcomponent_of ="",
-            mfr = Fournisseur,
-            asset_id = `ID Fiche`,
-            status = "in",
-            condition = "fair",
-            #            date_in_service = `Mise en service`,
-            comments = Remarques)
+#mob_equip_parent <- mob_equip0 %>%
+#  left_join(standards_equip, by=c("STANDARD D'EQUIPEMENT"="description")) %>%
+#  left_join(batiments_import, by=c("Local no"="c_porte")) %>%
+#  transmute("#eq.eq_id" = eq_id,
+#            eq_std = ifelse(is.na(`#eqstd.eq_std`), "A DEFINIR", `#eqstd.eq_std`),
+#            bl_id = `#rm.bl_id`,
+#            fl_id = fl_id,
+#            rm_id = rm_id,
+#            site_id = SiteCode,
+#            description = Nom,
+#            dv_id = 11500,
+#            dp_id = "0047",
+#            num_serial = `No de série`,
+#            subcomponent_of ="",
+#            mfr = Fournisseur,
+#            asset_id = `ID Fiche`,
+#            status = "in",
+#            condition = "fair",
+#            #            date_in_service = `Mise en service`,
+# comments = Remarques)
 
 # MOB Accesoires
-mob_equip_acc0 <- read_excel(GMAO_Acc_file, "LaboM_Acc",col_names = TRUE, col_types = NULL, na = "", )
-mob_equip_acc0$eq_id <-paste("MOB-00000-",formatC(seq.int(nrow(mob_equip_acc0)) + nrow(mob_equip0), width=6, flag=0, format="d"), sep = "")
+#mob_equip_acc0 <- read_excel(GMAO_Acc_file, "LaboM_Acc",col_names = TRUE, col_types = NULL, na = "", )
+#mob_equip_acc0$eq_id <-paste("MOB-00000-",formatC(seq.int(nrow(mob_equip_acc0)) + nrow(mob_equip0), width=6, flag=0, format="d"), sep = "")
 
-mob_equip_acc <- mob_equip_acc0 %>%
-  left_join(mob_equip_parent, by=c("IDFiche"="asset_id")) %>%
-  transmute(subcomponent_of = `#eq.eq_id`,
-            "#eq.eq_id" = eq_id,
-            eq_std = "ACCESSOIRE",
-            bl_id = bl_id,
-            fl_id = fl_id,
-            rm_id = rm_id,
-            site_id = site_id,
-            description = AccessoireDescription,
-            dv_id = 11500,
-            dp_id = "0047",
-            num_serial = "",
-            mfr = "",
-            asset_id = paste("MOB-",UUID, sep =""),
-            status = "in",
-            condition = "fair",
+#mob_equip_acc <- mob_equip_acc0 %>%
+#  left_join(mob_equip_parent, by=c("IDFiche"="asset_id")) %>%
+#  transmute(subcomponent_of = `#eq.eq_id`,
+#            "#eq.eq_id" = eq_id,
+#            eq_std = "ACCESSOIRE",
+#            bl_id = bl_id,
+#            fl_id = fl_id,
+#            rm_id = rm_id,
+#            site_id = site_id,
+#            description = AccessoireDescription,
+#            dv_id = 11500,
+#            dp_id = "0047",
+#            num_serial = "",
+#            mfr = "",
+#            asset_id = paste("MOB-",UUID, sep =""),
+#            status = "in",
+#            condition = "fair",
             #           date_in_service = "",
-            comments = Remarques)
+#            comments = Remarques)
 
 
-mob_equip <- rbind(mob_equip_parent, mob_equip_acc)
+#mob_equip <- rbind(mob_equip_parent, mob_equip_acc)
 
-write_archibus(mob_equip, "./01.eq-MOB.xlsx",
-               table.header = "Equipment",
-               sheet.name = "Equipment")
+#write_archibus(mob_equip, "./01.eq-MOB.xlsx",
+#               table.header = "Equipment",
+#               sheet.name = "Equipment")
 
 ##################################
 # SV equipement
@@ -773,7 +811,7 @@ write_archibus(sv_equip_parent, "./01.eq-FACSV.xlsx",
 
 ass_attrib <- read.csv(text="#asset_attribute_std.asset_attribute_std,title,description,asset_type", check.names=FALSE)
 ass_attrib[nrow(ass_attrib)+1,] <- c("LIEU","Lieu","","Equipment")
-ass_attrib[nrow(ass_attrib)+1,] <- c("TYPE","type","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TYPE","Type","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("DIAMETRE","Diametre","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("VALEURHORAIRE","Valeur horaire","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("INSTALLATION","Installation","","Equipment")
@@ -807,7 +845,7 @@ ass_attrib[nrow(ass_attrib)+1,] <- c("NOESTI","No ESTI","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("MARQUE","Marque","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("NOSURPLAN","No sur plan","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("INFOSMES","Infos MES","","Equipment")
-
+ass_attrib[nrow(ass_attrib)+1,] <- c("DIMENSIONSLPH","Dimensions L-P-H","cm","Equipment")
 
 ass_attrib[nrow(ass_attrib)+1,] <- c("DIMENSION","Dimension","cm","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("DIAMETRERACCORDEMENT","Diametre raccordement","","Equipment")
@@ -877,6 +915,7 @@ ass_attrib[nrow(ass_attrib)+1,] <- c("RELAIIREPONSE","RelaiIReponse","","Equipme
 ass_attrib[nrow(ass_attrib)+1,] <- c("RELAITEMPORISATION","RelaiTemporisation","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("RELAIINOMINAL","RelaiINominal","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("CHARGEUTILE","Charge utile","t","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("CHARGEUTILEKG","Charge utile","kg","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("TELASCENSEUR","No téléphone ascenseur","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("SYSTEMEURGENCE","Système d'appel d'urgence","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("IMAGE","Image Source","","Equipment")
@@ -924,7 +963,7 @@ ass_attrib[nrow(ass_attrib)+1,] <- c("PERTESENCHARGE","Pertes en charge (W)","",
 ass_attrib[nrow(ass_attrib)+1,] <- c("PERTESAVIDE","Pertes à vide (W)","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("TEMP.ALARME","Temp. alarme","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("TEMP.DECLENCHEMENT","Temp. déclenchement","","Equipment")
-ass_attrib[nrow(ass_attrib)+1,] <- c("DOCUMENT","Document","","Equipment")
+#ass_attrib[nrow(ass_attrib)+1,] <- c("DOCUMENT","Document","","Equipment")
 
 write_archibus(ass_attrib, "./02.asset_attrib.xlsx",
                table.header = "Asset Attribute Standards",
@@ -932,31 +971,31 @@ write_archibus(ass_attrib, "./02.asset_attrib.xlsx",
 
 # Attributs CHA
 
-eq_ass_attribut_lieu <- cha_equip0 %>%
-  filter (Lieu != "") %>%
-  transmute("#eq_asset_attribute.eq_id" = eq_id,
-            "asset_attribute_std" = "LIEU",
-            value = Lieu)
+#eq_ass_attribut_lieu <- cha_equip0 %>%
+#  filter (Lieu != "") %>%
+#  transmute("#eq_asset_attribute.eq_id" = eq_id,
+#            "asset_attribute_std" = "LIEU",
+#            value = Lieu)
 
 # Attributs CHA Accessoire
 
-eq_ass_attribut_cha_type <- cha_equip_acc0 %>%
-  filter (Type != "") %>%
-  transmute("#eq_asset_attribute.eq_id" = eq_id,
-            "asset_attribute_std" = "TYPE",
-            value = Type)
+#eq_ass_attribut_cha_type <- cha_equip_acc0 %>%
+#  filter (Type != "") %>%
+#  transmute("#eq_asset_attribute.eq_id" = eq_id,
+#            "asset_attribute_std" = "TYPE",
+#            value = Type)
 
-eq_ass_attribut_diametre <- cha_equip_acc0 %>%
-  filter (Diametre != "") %>%
-  transmute("#eq_asset_attribute.eq_id" = eq_id,
-            "asset_attribute_std" = "DIAMETRE",
-            value = Diametre)
+#eq_ass_attribut_diametre <- cha_equip_acc0 %>%
+#  filter (Diametre != "") %>%
+#  transmute("#eq_asset_attribute.eq_id" = eq_id,
+#            "asset_attribute_std" = "DIAMETRE",
+#            value = Diametre)
 
-eq_ass_attribut_valeurhoraire <- cha_equip_acc0 %>%
-  filter (ValeurHoraire != "") %>%
-  transmute("#eq_asset_attribute.eq_id" = eq_id,
-            "asset_attribute_std" = "VALEURHORAIRE",
-            value = ValeurHoraire)
+#eq_ass_attribut_valeurhoraire <- cha_equip_acc0 %>%
+#  filter (ValeurHoraire != "") %>%
+#  transmute("#eq_asset_attribute.eq_id" = eq_id,
+#            "asset_attribute_std" = "VALEURHORAIRE",
+#            value = ValeurHoraire)
 
 # Attributs VEN
 
@@ -983,10 +1022,27 @@ eq_ass_attribut_monobloctype <- ven_equip_valide %>%
 eq_ass_attribut_debitair <- ven_equip_valide %>%
   filter (`Débit d'air` != "") %>%
   filter (`Débit d'air` != "0") %>%
+  filter (is.na(`parent_eq_id`)) %>%
   #filter (is.na(`parent_eq_id`)) %>%
   transmute("#eq_asset_attribute.eq_id" = eq_id,
             "asset_attribute_std" = "DEBITAIR",
             value = `Débit d'air`) 
+
+eq_ass_attribut_debitair0 <- ven_equip_valide %>%
+  filter (`Débit d'air0` != "") %>%
+  filter (`Débit d'air0` != "0") %>%
+  filter (is.na(`parent_eq_id`)) %>%
+  #filter (is.na(`parent_eq_id`)) %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "DEBITAIR",
+            value = `Débit d'air0`) 
+
+eq_ass_attribut_ven_type <- ven_equip_valide %>%
+  filter (`Type` != "") %>%
+  #filter (!is.na(`parent_eq_id`)) %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TYPE",
+            value = `Type`)
 
 eq_ass_attribut_ven_dimension <- ven_equip_valide %>%
   filter (`Dimension1` != "") %>%
@@ -998,6 +1054,7 @@ eq_ass_attribut_ven_dimension <- ven_equip_valide %>%
 
 eq_ass_attribut_manometrepose <- ven_equip_valide %>% 
   filter ( `Manomètre Pose?` != "") %>%
+  filter ( `Standard d'équipement` == "Chapelle") %>%
   #filter (!is.na(`parent_eq_id`)) %>%
   transmute("#eq_asset_attribute.eq_id" = eq_id,
             "asset_attribute_std" = "MANOMETREPOSE?",
@@ -1076,6 +1133,7 @@ eq_ass_attribut_pressionstatique <-  ven_equip_valide %>%
 
 eq_ass_attribut_transmissiontype <- ven_equip_valide %>%
   filter (`Transmission type` != "") %>%
+  filter (is.na(`parent_eq_id`)) %>%
   transmute("#eq_asset_attribute.eq_id" = eq_id,
             "asset_attribute_std" = "TRANSMISSIONTYPE",
             value = `Transmission type`) 
@@ -1141,6 +1199,10 @@ eq_ass_attribut_diametreraccordement <- ven_equip_valide %>%
   transmute("#eq_asset_attribute.eq_id" = eq_id,
             "asset_attribute_std" = "DIAMETRERACCORDEMENT", 
             value = `Diamètre raccordement`)
+
+###### MOBILIER
+
+
 
 #eq_ass_attribut_intervention <- ven_equip_valide %>%
 #  filter ( `Intervention` != "") %>%
@@ -1355,43 +1417,43 @@ eq_ass_attribut_diametreraccordement <- ven_equip_valide %>%
 
 # Attributs SAN Accessoire
 
-eq_ass_attribut_san_type <- san_equip_acc0 %>%
-  filter (Type != "") %>%
-  transmute("#eq_asset_attribute.eq_id" = eq_id,
-            "asset_attribute_std" = "TYPE",
-            value = Type)
+#eq_ass_attribut_san_type <- san_equip_acc0 %>%
+#  filter (Type != "") %>%
+#  transmute("#eq_asset_attribute.eq_id" = eq_id,
+#            "asset_attribute_std" = "TYPE",
+#            value = Type)
 
-eq_ass_attribut_valeurhoraire <- san_equip_acc0 %>%
-  filter (ValeurHoraire != "") %>%
-  transmute("#eq_asset_attribute.eq_id" = eq_id,
-            "asset_attribute_std" = "VALEURHORAIRE",
-            value = ValeurHoraire)
+#eq_ass_attribut_valeurhoraire <- san_equip_acc0 %>%
+#  filter (ValeurHoraire != "") %>%
+#  transmute("#eq_asset_attribute.eq_id" = eq_id,
+#            "asset_attribute_std" = "VALEURHORAIRE",
+#            value = ValeurHoraire)
 
-eq_ass_attribut_diametre <- san_equip_acc0 %>%
-  filter (Diametre != "") %>%
-  transmute("#eq_asset_attribute.eq_id" = eq_id,
-            "asset_attribute_std" = "DIAMETRE",
-            value = Diametre)
+#eq_ass_attribut_diametre <- san_equip_acc0 %>%
+#  filter (Diametre != "") %>%
+#  transmute("#eq_asset_attribute.eq_id" = eq_id,
+#            "asset_attribute_std" = "DIAMETRE",
+#            value = Diametre)
 
-eq_ass_attribut_debitnom <- san_equip_acc0 %>%
-  filter (`DebitNom` != "") %>%
-  filter (`DebitNom` != "0") %>%
-  transmute("#eq_asset_attribute.eq_id" = eq_id,
-            "asset_attribute_std" = "DEBITNOM",
-            value = `DebitNom`) 
+#eq_ass_attribut_debitnom <- san_equip_acc0 %>%
+#  filter (`DebitNom` != "") %>%
+#  filter (`DebitNom` != "0") %>%
+#  transmute("#eq_asset_attribute.eq_id" = eq_id,
+#            "asset_attribute_std" = "DEBITNOM",
+#            value = `DebitNom`) 
 
-eq_ass_attribut_debiteffectif <- san_equip_acc0 %>%
-  filter (`DebitEffectif` != "") %>%
-  filter (`DebitEffectif` != "0") %>%
-  transmute("#eq_asset_attribute.eq_id" = eq_id,
-            "asset_attribute_std" = "DEBITEFFECTIF",
-            value = `DebitEffectif`) 
+#eq_ass_attribut_debiteffectif <- san_equip_acc0 %>%
+#  filter (`DebitEffectif` != "") %>%
+#  filter (`DebitEffectif` != "0") %>%
+#  transmute("#eq_asset_attribute.eq_id" = eq_id,
+#            "asset_attribute_std" = "DEBITEFFECTIF",
+#            value = `DebitEffectif`) 
 
-eq_ass_attribut_position <- san_equip_acc0 %>%
-  filter (`Position` != "") %>%
-  transmute("#eq_asset_attribute.eq_id" = eq_id,
-            "asset_attribute_std" = "POSITION",
-            value = `Position`) 
+#eq_ass_attribut_position <- san_equip_acc0 %>%
+#  filter (`Position` != "") %>%
+#  transmute("#eq_asset_attribute.eq_id" = eq_id,
+#            "asset_attribute_std" = "POSITION",
+#            value = `Position`) 
 
 # Attributs LEVAG
 ################################
@@ -1408,11 +1470,11 @@ eq_ass_attribut_levag_modele <- levag_equip_valide %>%
             "asset_attribute_std" = "MODELE",
             value = `Modèle`) 
 
-eq_ass_attribut_levag_lieu <- cha_equip0 %>%
-  filter (Lieu != "") %>%
-  transmute("#eq_asset_attribute.eq_id" = eq_id,
-            "asset_attribute_std" = "LIEU",
-            value = Lieu)
+#eq_ass_attribut_levag_lieu <- cha_equip0 %>%
+#  filter (Lieu != "") %>%
+#  transmute("#eq_asset_attribute.eq_id" = eq_id,
+#            "asset_attribute_std" = "LIEU",
+#            value = Lieu)
 
 eq_ass_attribut_levag_idcontrat <- levag_equip_valide %>% 
   filter (`ID Contrat` != "") %>% 
@@ -1508,11 +1570,23 @@ eq_ass_attribut_ele_nosurplan <- ele_equip_valide %>%
 #            "asset_attribute_std" = "INFOSMES",
 #            value = `Infos MES`)
 
+eq_ass_attribut_ele_lieu <- ele_equip_valide %>%
+  filter (`Lieu` != "") %>%	
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "LIEU",
+            value = `Lieu`)
+
 eq_ass_attribut_ele_marque <- ele_equip_valide %>%
   filter (`Marque` != "") %>%	
   transmute("#eq_asset_attribute.eq_id" = eq_id,
             "asset_attribute_std" = "MARQUE",
             value = `Marque`)
+
+eq_ass_attribut_ele_type <- ele_equip_valide %>%
+  filter (`Type` != "") %>%	
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TYPE",
+            value = `Type`)
 
 #eq_ass_attribut_nbreheure <- ele_equip_acc0 %>%
 #  filter (`NbreHeure` != "") %>%
@@ -1767,58 +1841,66 @@ eq_ass_attribut_relaiinominal <- ele_equip_acc0 %>%
             value = `RelaiINominal`)
 # Assenceurs
 
-#eq_ass_attribut_dimensions <- leva_equip0 %>%
-#  filter (`Dimensions L-P-H (cm)` != "") %>%
-#  transmute("#eq_asset_attribute.eq_id" = eq_id,
-#            "asset_attribute_std" = "DIMENSIONS",
-#            value = `Dimensions L-P-H (cm)`)
+eq_ass_attribut_modele <- leva_equip0 %>% 
+  filter (`Modèle` != "") %>% 
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "MODELE",
+            value = `Modèle`) 
 
-#eq_ass_attribut_charge <- leva_equip0 %>%
-#  filter (`Charge utile (kg)` != "") %>%
-#transmute("#eq_asset_attribute.eq_id" = eq_id,
-#"asset_attribute_std" = "CHARGEUTILE",
-#            value = `Charge utile (kg)`)
+eq_ass_attribut_dimensions <- leva_equip0 %>%
+  filter (`Dimensions L-P-H (cm)` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "DIMENSIONSLPH",
+            value = `Dimensions L-P-H (cm)`)
 
-#eq_ass_attribut_telascenseur <- leva_equip0 %>%
-#  filter (`No téléphone ascenseur` != "") %>%
-#  transmute("#eq_asset_attribute.eq_id" = eq_id,
-#            "asset_attribute_std" = "TELASCENSEUR",
-#            value = `No téléphone ascenseur`)
+eq_ass_attribut_charge <- leva_equip0 %>%
+  filter (`Charge utile (kg)` != "") %>%
+transmute("#eq_asset_attribute.eq_id" = eq_id,
+"asset_attribute_std" = "CHARGEUTILEKG",
+            value = `Charge utile (kg)`)
 
-#eq_ass_attribut_sytemeurgence <- leva_equip0 %>%
-#  filter (`Système d'appel d'urgence` != "") %>%
-#  transmute("#eq_asset_attribute.eq_id" = eq_id,
-#            "asset_attribute_std" = "SYSTEMEURGENCE",
-#            value = `Système d'appel d'urgence`)
+eq_ass_attribut_telascenseur <- leva_equip0 %>%
+  filter (`No téléphone ascenseur` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "TELASCENSEUR",
+            value = `No téléphone ascenseur`)
 
-#eq_ass_attribut_idcontrat <- leva_equip0 %>% 
-#  filter (`Contrat` != "") %>% 
-#  transmute("#eq_asset_attribute.eq_id" = eq_id,
-#            "asset_attribute_std" = "IDCONTRAT",
-#            value = `Contrat`) 
+eq_ass_attribut_sytemeurgence <- leva_equip0 %>%
+  filter (`Système d'appel d'urgence` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "SYSTEMEURGENCE",
+            value = `Système d'appel d'urgence`)
+
+eq_ass_attribut_idcontrat <- leva_equip0 %>% 
+  filter (`Contrat` != "") %>% 
+  transmute("#eq_asset_attribute.eq_id" = eq_id,
+            "asset_attribute_std" = "IDCONTRAT",
+            value = `Contrat`) 
 
 
 # Mobiliers
 
-eq_ass_attribut_mob_type <- mob_equip0 %>%
-  filter (`Type` != "") %>%
-  transmute("#eq_asset_attribute.eq_id" = eq_id,
-            "asset_attribute_std" = "TYPE",
-            value = `Type`)
+#eq_ass_attribut_mob_type <- mob_equip0 %>%
+#  filter (`Type` != "") %>%
+#  transmute("#eq_asset_attribute.eq_id" = eq_id,
+#            "asset_attribute_std" = "TYPE",
+#            value = `Type`)
 
-eq_ass_attribut_image <- mob_equip0 %>%
-  filter (`Image source` != "") %>%
-  transmute("#eq_asset_attribute.eq_id" = eq_id,
-            "asset_attribute_std" = "IMAGE",
-            value = `Image source`)
+#eq_ass_attribut_image <- mob_equip0 %>%
+#  filter (`Image source` != "") %>%
+#  transmute("#eq_asset_attribute.eq_id" = eq_id,
+#            "asset_attribute_std" = "IMAGE",
+#            value = `Image source`)
 
-eq_ass_attribut_originale <- mob_equip0 %>%
-  filter (`Originale?` != "") %>%
-  transmute("#eq_asset_attribute.eq_id" = eq_id,
-            "asset_attribute_std" = "ORIGINALE",
-            value = `Originale?`)
+#eq_ass_attribut_originale <- mob_equip0 %>%
+#  filter (`Originale?` != "") %>%
+#  transmute("#eq_asset_attribute.eq_id" = eq_id,
+#            "asset_attribute_std" = "ORIGINALE",
+#            value = `Originale?`)
 
 # Mobilier Accesoires
+
+
 
 eq_ass_attribut_prix <- mob_equip_acc0 %>%
   filter (`PrixUnitaire` != "") %>%
@@ -2080,25 +2162,26 @@ eq_ass_attribut_mt_temp.declenchement <- mt_equip0 %>%
             "asset_attribute_std" = "TEMP.DECLENCHEMENT",
             value = `Temp. déclenchement`)
 
-eq_ass_attribut_mt_document <- mt_equip0 %>%
-  filter ( `Document` != "") %>%
-  transmute("#eq_asset_attribute.eq_id" = eq_id,
-            "asset_attribute_std" = "DOCUMENT",
-            value = `Document`)
+#eq_ass_attribut_mt_document <- mt_equip0 %>%
+#  filter ( `Document` != "") %>%
+#  transmute("#eq_asset_attribute.eq_id" = eq_id,
+#            "asset_attribute_std" = "DOCUMENT",
+#            value = `Document`)
 
 
 eq_ass_attribut <- rbind(
 #                         eq_ass_attribut_lieu, 
 #                         eq_ass_attribut_san_type,
 #                         eq_ass_attribut_cha_type,
-#                        eq_ass_attribut_ven_type,
-#                        eq_ass_attribut_ven_dimension,
+                        eq_ass_attribut_ven_type,
+                        eq_ass_attribut_ven_dimension,
 #                         eq_ass_attribut_diametre, 
 #                         eq_ass_attribut_valeurhoraire,
                          eq_ass_attribut_installation,
                          eq_ass_attribut_monobloctype,
 #                         eq_ass_attribut_monoblocno,
                          eq_ass_attribut_debitair,
+                         eq_ass_attribut_debitair0,
                          eq_ass_attribut_pressionextraction,
                          eq_ass_attribut_pressionpulsion,
                          eq_ass_attribut_moteurtype,
@@ -2121,12 +2204,12 @@ eq_ass_attribut <- rbind(
                          eq_ass_attribut_diametreraccordement,
                          eq_ass_attribut_manometrepose,
 #                         eq_ass_attribut_intervention,
-#                         eq_ass_attribut_idcontrat,
+                         eq_ass_attribut_idcontrat,
 #                         eq_ass_attribut_dimension,
 # LEVAG
 #                         eq_ass_attribut_levag_frequence,
                          eq_ass_attribut_levag_modele,
-                         eq_ass_attribut_levag_lieu,
+#                         eq_ass_attribut_levag_lieu,
                          eq_ass_attribut_levag_idcontrat,
                          eq_ass_attribut_levag_noesti,
 #                         eq_ass_attribut_levag_infoscontrat,
@@ -2136,13 +2219,16 @@ eq_ass_attribut <- rbind(
                          eq_ass_attribut_levag_marque,
                          eq_ass_attribut_levag_charge,
 # ELEC                         
+                         eq_ass_attribut_ele_lieu,
                          eq_ass_attribut_ele_marque,
+                         eq_ass_attribut_ele_type,
 #                         eq_ass_attribut_ele_infosmes,
                          eq_ass_attribut_ele_nosurplan,
                          eq_ass_attribut_ele_type,
 #                         eq_ass_attribut_ele_infoscontrat,
                          eq_ass_attribut_ele_noesti,
                          eq_ass_attribut_ele_idcontrat,
+                         eq_ass_attribut_dimensions,
 #                         eq_ass_attribut_ele_frequence,
 #                         eq_ass_attribut_diametreraccordement,
 #                         eq_ass_attribut_vitesseairprevue,
@@ -2213,9 +2299,10 @@ eq_ass_attribut <- rbind(
 #                         eq_ass_attribut_relaitemporisation,
 #                         eq_ass_attribut_relaiinominal,
 #                        eq_ass_attribut_dimensions,
-#                         eq_ass_attribut_charge,
-#                         eq_ass_attribut_telascenseur,
-#                         eq_ass_attribut_sytemeurgence,
+                         eq_ass_attribut_modele,
+                         eq_ass_attribut_charge,
+                         eq_ass_attribut_telascenseur,
+                         eq_ass_attribut_sytemeurgence,
 #                         eq_ass_attribut_mob_type,
 #                         eq_ass_attribut_image,
 #                         eq_ass_attribut_originale,
@@ -2260,8 +2347,8 @@ eq_ass_attribut_mt_massehuile,
 eq_ass_attribut_mt_pertesencharge,
 eq_ass_attribut_mt_pertesavide,
 eq_ass_attribut_mt_temp.alarme,
-eq_ass_attribut_mt_temp.declenchement,
-eq_ass_attribut_mt_document
+eq_ass_attribut_mt_temp.declenchement
+#eq_ass_attribut_mt_document
                           )
 
 write_archibus(eq_ass_attribut, "./03.eq_asset_attrib.xlsx",
