@@ -6,22 +6,22 @@ library("data.table")
 
 ID_file = "./2022-07-01 - Liste Equipements Cristal Test.xlsx"
 Domaine_file = "./Données de référence.xlsx"
-Equi_grpeA_file = "./Equipements_gpeA_final_v2.xlsx"
-Equi_grpeB_file = "./Equipements_gpeB_v4.xlsx"
-Equi_grpeC_file = "./Import_equipmt_22-05-23_v4.xlsx"
-Venti_file = "./VEN_Installations_04.07.2022.csv"
-Venti_Acc_file = "./VEN_Accessoires_27.06.2022.csv"
-Elec_file  = "./ELE_Installations_04.07.2022.csv"
-Mt_file = "./UTILI_Cellules MT_v03.xlsx"
+Equi_grpeA_file = "./Equipements_gpeA_final_v3.xlsx"
+Equi_grpeB_file = "./Equipements_gpeB_v5.xlsx"
+Equi_grpeC_file = "./Import_equipmt_22-05-23_v5.xlsx"
+Venti_file = "./VEN_Installations_23.09.2022.csv"
+Venti_Acc_file = "./VEN_Accessoires_23.09.2022.csv"
+Elec_file  = "./ELE_Installations_23.09.2022.csv"
+Mt_file = "./UTILI_Cellules MT_v04.xlsx"
 Utils_file = "./UTILI_GE_air_chaleur_v02.xlsx"
 FacSV_file = "./Liste_équipement_à_importer.xlsx"
-GMAO_file = "./GMAO_4D_Export2021_MAPPING_eqstd.xlsx"
-GMAO_Acc_file = "./4D_GMAO_Accessoires_avec UUID_4-3-22.xlsx"
+#GMAO_file = "./GMAO_4D_Export2021_MAPPING_eqstd.xlsx"
+#GMAO_Acc_file = "./4D_GMAO_Accessoires_avec UUID_4-3-22.xlsx"
 ELA_Ascenseurs_file = "./LEVAG_ascenseurs_22-05-10.xlsx"
 #SV_file = "./Maintenance _Equipements_INFRA_SV_4D.xlsx"
-Energie_file = "./ENERGIE_compteurs_v3.xlsx"
-TCVS_file = "./Import_TCVS_22-08-19.xlsx"
-TCVS_Detail_file = "./TCVS_Installations_19.08.2022.xlsx"
+Energie_file = "./ENERGIE_compteurs_v4.xlsx"
+TCVS_file = "./TCVS_Installations_23.09.2022.xlsx"
+TCVS_Detail_file = "./Import_TCVS_22-08-19.xls"
 
 A1 <- function(row, col) {
   #' Convert real-world (integer) coordinates to Excel®-style A1 notation.
@@ -72,7 +72,10 @@ write_archibus <- function(data, filename, table.header, sheet.name = "sheet1") 
 toArchibusStatus <- function(etat) {
   
   case_when(etat == "Faux"   ~ "in",
+            etat == "FAUX"   ~ "in",
+            etat == "FALSE"  ~ "in",
             etat == "Vrai"    ~ "out",
+            etat == "VRAI"    ~ "out",
             etat == ""        ~ "",
             TRUE              ~ "out")
 }
@@ -111,7 +114,7 @@ site_import <- read_excel("./Export Bâtiments.xlsx")
 id_archibus <- read_excel(ID_file, range = cell_cols("A:B"))
 
 
-batiments_import <- read_excel("./06. rm.xlsx","Sheet1",col_names = TRUE, col_types = NULL, na = "", skip = 1) %>%
+batiments_import <- read_excel("./22 - 2022-09-20-rm.xlsx","Sheet1",col_names = TRUE, col_types = NULL, na = "", skip = 1) %>%
   left_join(site_import, by=c("#rm.bl_id"="Building Code"))
 
 ##################################
@@ -193,7 +196,7 @@ ven_valideA$ID_Fiche_UUID <- NA
 ven_valideBVenti <- read_excel(Equi_grpeB_file, "Feuil1",col_names = TRUE, col_types = NULL, na = "") %>%
   filter (`Domaine technique` == "VENTIL") %>%
   mutate(`Domaine technique` = recode(`Domaine technique`, VENTIL = 'Ventilation' )) %>%
-  mutate(`ID_Fiche_UUID` = paste(`ID Fiche`,`UUID`,sep = " ")) %>%
+  mutate(`ID_Fiche_UUID` = ifelse(is.na(UUID),`ID Fiche`,paste(`ID Fiche`,`UUID`,sep = " "))) %>%
   left_join(id_archibus,by=c("ID_Fiche_UUID" = "asset_id"))
 ven_valideBVenti <- ven_valideBVenti %>%
   mutate(eq_id = ifelse(is.na(eq_id),paste("VENTI-00000-",formatC(seq.int(nrow(ven_valideBVenti)) + nrow(ven_valideA) + 10000, width=6, flag=0, format="d"),sep = ""),eq_id))
@@ -202,7 +205,7 @@ ven_valideBMobil <- read_excel(Equi_grpeB_file, "Feuil1",col_names = TRUE, col_t
   filter (`Domaine technique` == "MOBIL") %>%
   filter (`Standard d'équipement` != "") %>%
   mutate(`Domaine technique` = recode(`Domaine technique`, VENTIL = 'Mobilier labo' )) %>%
-  mutate(`ID_Fiche_UUID` = paste(`ID Fiche`,`UUID`,sep = " ")) %>%
+  mutate(`ID_Fiche_UUID` = ifelse(is.na(UUID),`ID Fiche`,paste(`ID Fiche`,`UUID`,sep = " "))) %>%
   left_join(id_archibus,by=c("ID_Fiche_UUID" = "asset_id"))
 ven_valideBMobil <- ven_valideBMobil %>%
   mutate(eq_id = ifelse(is.na(eq_id),paste("MOBIL-00000-",formatC(seq.int(nrow(ven_valideBMobil)) + 10000, width=6, flag=0, format="d"),sep = ""),eq_id))
@@ -247,7 +250,7 @@ ven_valideCVenti <- read_excel(Equi_grpeC_file, "VEN_Accessoires",col_names = TR
 ven_valideCVenti$category <- NULL
 ven_valideCVenti$"Standard d'équipement" <- NULL
 ven_valideCVenti <- ven_valideCVenti %>% rename("Standard d'équipement"=description) %>%
-  mutate(`ID_Fiche_UUID` = paste(`ID Fiche`,`UUID`,sep = " ")) %>%
+  mutate(`ID_Fiche_UUID` = ifelse(is.na(UUID),`ID Fiche`,paste(`ID Fiche`,`UUID`,sep = " "))) %>%
   left_join(id_archibus,by=c("ID_Fiche_UUID" = "asset_id"))
 ven_valideCVenti <- ven_valideCVenti %>%
   mutate(eq_id = ifelse(is.na(eq_id),paste("VENTI-00000-",formatC(seq.int(nrow(ven_valideCVenti)) + nrow(ven_valideA) + nrow(ven_valideBVenti) + 10000, width=6, flag=0, format="d"),sep = ""),eq_id))
@@ -264,6 +267,7 @@ ven_valide <- rbind(ven_valide_A_B , ven_valideCVenti)
 
 #ven_valide <- ven_valide %>%
 #  left_join(ven_valide, by=c("Standard d'équipement"="description"))
+#ven_equip0 <- read_excel(Venti_file, "VEN_Installations_23.09.2022",col_names = TRUE, col_types = NULL, na = "") %>%
 ven_equip0 <- fread(file = Venti_file  , encoding = "Latin-1") %>%
   rename("Débit d'air0" = "Débit d'air")
 
@@ -280,7 +284,7 @@ ven_equip_parent <- ven_equip_valide %>%
 #  left_join(batiments_import, by=c("# local"=gsub("", "","c_porte")),suffix = c("","_2")) %>%
   left_join(batiments_import, by=c("# local"="c_porte"),suffix = c("","_2")) %>%
   transmute("#eq.eq_id" = eq_id,
-            eq_std = ifelse(is.na(`#eqstd.eq_std`), "A DEFINIR", `#eqstd.eq_std`),
+            eq_std = ifelse(is.na(`#eqstd.eq_std`), paste("A DEFINIR",`Domaine technique`,`Standard d'équipement`, sep=" "), `#eqstd.eq_std`),
             bl_id = ifelse(is.na(`# local`),`#rm.bl_id`, `#rm.bl_id_2`),
             fl_id = ifelse(is.na(`# local`),`fl_id`, `fl_id_2`),
             rm_id = ifelse(is.na(`# local`),`rm_id`, `rm_id_2`),
@@ -376,7 +380,7 @@ write_archibus(ven_equip_parent, "./01.eq-VENTI.xlsx",
 
 
 leva_equip0 <- read_excel(ELA_Ascenseurs_file, "Inventaire ascenseurs",col_names = TRUE, col_types = NULL, na = "", skip = 1)  %>%
-  mutate(`ID_Fiche_UUID` = paste(`ID Fiche (table Electricité)`,`UUID (table Acsenseurs)`,sep = " ")) %>%
+  mutate(`ID_Fiche_UUID` = paste(`ID Fiche (table Electricité)`,`UUID (table Acsenseurs)`,sep = " - ")) %>%
   left_join(id_archibus,by=c("ID_Fiche_UUID" = "asset_id"))
 leva_equip0 <- leva_equip0 %>%
   mutate(eq_id = ifelse(is.na(eq_id),paste("LEVAG-00000-",formatC(seq.int(nrow(leva_equip0)) + 10000, width=6, flag=0, format="d"),sep = ""),eq_id))
@@ -429,7 +433,7 @@ levag_equip2 <- levag_equip_valide %>%
   left_join(standards_equip, by=c("Standard d'équipement"="description")) %>%
   left_join(batiments_import, by=c("Local no"="c_porte")) %>%
   transmute("#eq.eq_id" = eq_id,
-            eq_std = ifelse(is.na(`#eqstd.eq_std`), "A DEFINIR", `#eqstd.eq_std`),
+            eq_std = ifelse(is.na(`#eqstd.eq_std`), paste("A DEFINIR ",`Domaine technique`, `Standard d'équipement`), `#eqstd.eq_std`),
             bl_id = `#rm.bl_id`,
             fl_id = fl_id,
             rm_id = rm_id,
@@ -499,7 +503,7 @@ ele_equip_parent <- ele_equip_valide %>%
 elect2 <- read_excel(Equi_grpeC_file, "ELE_Installations",col_names = TRUE, col_types = NULL, na = "") %>%
   filter (`Standard d'équipement` != "TGBT") %>%
   mutate("Composant de :" = as.character(`Composant de :`)) %>%
-  mutate(`ID_Fiche_UUID` = paste(`ID Fiche`,`UUID`,sep = " ")) %>%
+  mutate(`ID_Fiche_UUID` = ifelse(is.na(UUID),`ID Fiche`,paste(`ID Fiche`,`UUID`,sep = " "))) %>%
   left_join(id_archibus,by=c("ID_Fiche_UUID" = "asset_id"))
 elect2 <- elect2 %>%
   mutate(eq_id = ifelse(is.na(eq_id),paste("ELECT-00000-",formatC(seq.int(nrow(elect2)) + nrow(elect_valide) + 10000, width=6, flag=0, format="d"),sep = ""),eq_id))
@@ -528,7 +532,7 @@ ele_equip_elect2 <- elect2 %>%
             subcomponent_of = parent_eq_id,
             mfr = `Fournisseur`,
             asset_id = `ID Fiche`,
-            status = toArchibusStatus(`HS?`),
+            status = 'in',
             condition = "fair",
             comments = Remarques,
             date_installed ="")
@@ -584,7 +588,7 @@ write_archibus(ele_equip, "./01.eq-ELECT.xlsx",
 #############################################
 
 
-mt_equip0 <- read_excel(Mt_file, "Cellules MT v3",col_names = TRUE, col_types = NULL, na = "", skip = 1) %>%
+mt_equip0 <- read_excel(Mt_file, "Cellules MT v4",col_names = TRUE, col_types = NULL, na = "", skip = 1) %>%
   left_join(id_archibus,by=c("ID"="asset_id"))
 mt_equip0 <- mt_equip0 %>% 
   mutate(eq_id = ifelse(is.na(eq_id),paste("UTILI-00000-",formatC(seq.int(nrow(mt_equip0)) + 10000, width=6, flag=0, format="d"),sep = ""),eq_id))
@@ -715,7 +719,7 @@ util3_equip <- util3 %>%
 util4 <- read_excel(Equi_grpeC_file, "ELE_Installations",col_names = TRUE, col_types = NULL, na = "") %>%
   filter (`Standard d'équipement` == "TGBT") %>%
   mutate("Composant de :" = as.character(`Composant de :`)) %>%
-  mutate(`ID_Fiche_UUID` = paste(`ID Fiche`,`UUID`,sep = " ")) %>%
+  mutate(`ID_Fiche_UUID` = ifelse(is.na(UUID),`ID Fiche`,paste(`ID Fiche`,`UUID`,sep = " "))) %>%
   left_join(id_archibus,by=c("ID_Fiche_UUID" = "asset_id"))
 util4 <- util4 %>%
   mutate(eq_id = ifelse(is.na(eq_id),paste("UTILI-00000-",formatC(seq.int(nrow(util4)) + nrow(mt_equip0) + nrow(util1) + nrow(util2) + nrow(util4) + 10000, width=6, flag=0, format="d"),sep = ""),eq_id))
@@ -875,16 +879,16 @@ write_archibus(sv_equip_parent, "./01.eq-FACSV.xlsx",
 # Energie
 ##################################
 
-energie <-read_excel(Energie_file, "Table compteurs_v3",col_names = TRUE, col_types = NULL, na = "", skip = 1)
+energie <-read_excel(Energie_file, "Table compteurs_v4",col_names = TRUE, col_types = NULL, na = "", skip = 1)
   
 energie_equip <- energie %>%
   left_join(batiments_import, by=c("Local"="c_porte")) %>%
   transmute("#eq.eq_id" = `ID_ARCHIBUS`,
             eq_std = `Standard d'équipement`,
-            bl_id = ifelse(is.na(`#rm.bl_id`),`Bâtiment`,`#rm.bl_id`),
+            bl_id = ifelse(is.na(`#rm.bl_id`)& !is.na(`Local`),`Local`,`#rm.bl_id`),
             fl_id = ifelse(is.na(`fl_id`),"",fl_id),
             rm_id = ifelse(is.na(`rm_id`),"",rm_id),
-            site_id = ifelse(is.na(`SiteCode`),"E",SiteCode),
+            site_id = ifelse(`Bâtiment`=="JD7","N",ifelse(is.na(`SiteCode`),"E",SiteCode)),
             description = `Description de l’équipement`,
             dv_id = 11500,
             dp_id = "0047",
@@ -915,14 +919,14 @@ prefixe_domaine <- function(domaine) {
             domaine == "UTILITES"     ~ "UTILI")
 }
 
-tcvs <- read_excel(TCVS_file, "TCVS_Installations",col_names = TRUE, col_types = NULL, na = "")  %>%
-  mutate(`ID_Fiche_UUID` = paste(`ID Fiche`,`UUID`,sep = " ")) %>%
+tcvs <- read_excel(TCVS_file, "TCVS_Installations_23.09.2022",col_names = TRUE, col_types = NULL, na = "")  %>%
+  mutate(`ID_Fiche_UUID` = ifelse(is.na(UUID),`ID Fiche`,paste(`ID Fiche`,`UUID`,sep = " "))) %>%
   left_join(id_archibus,by=c("ID_Fiche_UUID" = "asset_id"))
 
 tcvs <- tcvs %>%
   mutate(eq_id = ifelse(is.na(eq_id),paste(prefixe_domaine(`Domaine technique`),"-00000-",formatC(seq.int(nrow(tcvs)) + 19000, width=6, flag=0, format="d"),sep = ""),eq_id))
 
-tcvs_detail <- read_excel(TCVS_Detail_file, "TCVS_Installations_19.08.2022",col_names = TRUE, col_types = NULL, na = "") %>%
+tcvs_detail <- read_excel(TCVS_Detail_file, "TCVS_Installations_23.09.2022",col_names = TRUE, col_types = NULL, na = "") %>%
   left_join(tcvs, by=c("ID Fiche"="ID Fiche", "UUID"="UUID"))
 
 #leva_equip0$eq_id <-paste("LEVAG-00000-",formatC(seq.int(nrow(leva_equip0)), width=6, flag=0, format="d"),sep = "")
