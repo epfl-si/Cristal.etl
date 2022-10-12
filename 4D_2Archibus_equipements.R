@@ -7,7 +7,7 @@ library("data.table")
 ID_file = "./2022-07-01 - Liste Equipements Cristal Test.xlsx"
 Domaine_file = "./Données de référence.xlsx"
 Equi_grpeA_file = "./Equipements_gpeA_final_v3.xlsx"
-Equi_grpeB_file = "./Equipements_gpeB_v5.xlsx"
+Equi_grpeB_file = "./Equipements_gpeB_v6.xlsx"
 Equi_grpeC_file = "./Import_equipmt_22-05-23_v5.xlsx"
 Venti_file = "./VEN_Installations_23.09.2022.csv"
 Venti_Acc_file = "./VEN_Accessoires_23.09.2022.csv"
@@ -21,7 +21,7 @@ ELA_Ascenseurs_file = "./LEVAG_ascenseurs_22-05-10.xlsx"
 #SV_file = "./Maintenance _Equipements_INFRA_SV_4D.xlsx"
 Energie_file = "./ENERGIE_compteurs_v4.xlsx"
 TCVS_file = "./TCVS_Installations_23.09.2022.xlsx"
-TCVS_Detail_file = "./Import_TCVS_22-08-19.xls"
+TCVS_Detail_file = "./Import_TCVS_22-08-19.xlsx"
 
 A1 <- function(row, col) {
   #' Convert real-world (integer) coordinates to Excel®-style A1 notation.
@@ -194,17 +194,15 @@ ven_valideA$UUID <- NA
 ven_valideA$ID_Fiche_UUID <- NA
 
 ven_valideBVenti <- read_excel(Equi_grpeB_file, "Feuil1",col_names = TRUE, col_types = NULL, na = "") %>%
-  filter (`Domaine technique` == "VENTIL") %>%
-  mutate(`Domaine technique` = recode(`Domaine technique`, VENTIL = 'Ventilation' )) %>%
+  filter (`Domaine technique` == "Ventilation") %>%
   mutate(`ID_Fiche_UUID` = ifelse(is.na(UUID),`ID Fiche`,paste(`ID Fiche`,`UUID`,sep = " "))) %>%
   left_join(id_archibus,by=c("ID_Fiche_UUID" = "asset_id"))
 ven_valideBVenti <- ven_valideBVenti %>%
   mutate(eq_id = ifelse(is.na(eq_id),paste("VENTI-00000-",formatC(seq.int(nrow(ven_valideBVenti)) + nrow(ven_valideA) + 10000, width=6, flag=0, format="d"),sep = ""),eq_id))
 
 ven_valideBMobil <- read_excel(Equi_grpeB_file, "Feuil1",col_names = TRUE, col_types = NULL, na = "") %>%
-  filter (`Domaine technique` == "MOBIL") %>%
+  filter (`Domaine technique` == "Mobilier labo") %>%
   filter (`Standard d'équipement` != "") %>%
-  mutate(`Domaine technique` = recode(`Domaine technique`, VENTIL = 'Mobilier labo' )) %>%
   mutate(`ID_Fiche_UUID` = ifelse(is.na(UUID),`ID Fiche`,paste(`ID Fiche`,`UUID`,sep = " "))) %>%
   left_join(id_archibus,by=c("ID_Fiche_UUID" = "asset_id"))
 ven_valideBMobil <- ven_valideBMobil %>%
@@ -277,6 +275,10 @@ ven_equip1 <- fread(Venti_Acc_file , encoding = "Latin-1")
 ven_equip_valide <- ven_valide %>%
   left_join(ven_equip0, by=c("ID Fiche"="ID Fiche")) %>%
   left_join(ven_equip1, by=c("ID Fiche"="ID Fiche", "UUID.x"="UUID"))
+
+write_archibus(ven_equip_valide, "./000x.eq-VENTI_all.xlsx",
+               table.header = "Equipment",
+               sheet.name = "Equipment")
   
 ven_equip_parent <- ven_equip_valide %>%
   left_join(standards_equip, by=c("Standard d'équipement"="description")) %>%
@@ -442,7 +444,7 @@ levag_equip2 <- levag_equip_valide %>%
             dv_id = 11500,
             dp_id = "0047",
             num_serial = `No de série`,
-            modelno = `Installation no`,
+            modelno = `Modèle`,
             subcomponent_of ="",
             mfr = Fournisseur,
             asset_id = `ID Fiche`,
@@ -654,7 +656,7 @@ util1_equip <- util1 %>%
             asset_id = ID,
             status = "in",
             condition = "fair",
-            comments = "",
+            comments = `Commentaires`,
             date_installed = `Date d’Installation`)
 
 util2 <- read_excel(Utils_file, "Compresseur air",col_names = TRUE, col_types = NULL, na = "", skip = 1) %>%
@@ -675,11 +677,11 @@ util2_equip <- util2 %>%
             fl_id = fl_id,
             rm_id = rm_id,
             site_id = SiteCode,
-            description = `Modèle`,
+            description = "",
             dv_id = 11500,
             dp_id = "0047",
             num_serial = `Numéro de série`,
-            modelno = "",
+            modelno = `Modèle`,
             subcomponent_of = "",
             mfr = Fabricant,
             asset_id = `ID / UUID`,
@@ -703,11 +705,11 @@ util3_equip <- util3 %>%
             fl_id = fl_id,
             rm_id = rm_id,
             site_id = SiteCode,
-            description = `Modèle`,
+            description = "",
             dv_id = 11500,
             dp_id = "0047",
             num_serial = `Numéro de série`,
-            modelno = "",
+            modelno = `Modèle`,
             subcomponent_of = "",
             mfr = Fabricant,
             asset_id = `ID / UUID`,
@@ -923,15 +925,17 @@ tcvs <- read_excel(TCVS_file, "TCVS_Installations_23.09.2022",col_names = TRUE, 
   mutate(`ID_Fiche_UUID` = ifelse(is.na(UUID),`ID Fiche`,paste(`ID Fiche`,`UUID`,sep = " "))) %>%
   left_join(id_archibus,by=c("ID_Fiche_UUID" = "asset_id"))
 
-tcvs <- tcvs %>%
+tcvs_detail <- read_excel(TCVS_Detail_file, "TCVS_Installations",col_names = TRUE, col_types = NULL, na = "") %>%
+  left_join(tcvs, by=c("ID Fiche"="ID Fiche", "UUID"="UUID"))
+
+tcvs <- tcvs_detail %>%
   mutate(eq_id = ifelse(is.na(eq_id),paste(prefixe_domaine(`Domaine technique`),"-00000-",formatC(seq.int(nrow(tcvs)) + 19000, width=6, flag=0, format="d"),sep = ""),eq_id))
 
-tcvs_detail <- read_excel(TCVS_Detail_file, "TCVS_Installations_23.09.2022",col_names = TRUE, col_types = NULL, na = "") %>%
-  left_join(tcvs, by=c("ID Fiche"="ID Fiche", "UUID"="UUID"))
+
 
 #leva_equip0$eq_id <-paste("LEVAG-00000-",formatC(seq.int(nrow(leva_equip0)), width=6, flag=0, format="d"),sep = "")
 
-tcvs_equip <- tcvs_detail %>%
+tcvs_equip <- tcvs %>%
   left_join(batiments_import, by=c("Local no"="c_porte")) %>%
   transmute("#eq.eq_id" = eq_id,
             eq_std = `Standard d'équipement`,
@@ -1106,12 +1110,12 @@ ass_attrib[nrow(ass_attrib)+1,] <- c("PLOT3","Plot 3","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("PLOT4","Plot 4","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("PLOT5","Plot 5","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("NATUREDESENROULEMENTS","Nature des enroulements","","Equipment")
-ass_attrib[nrow(ass_attrib)+1,] <- c("COURANTNOMINALBT","Courant nominal BT (A)","","Equipment")
-ass_attrib[nrow(ass_attrib)+1,] <- c("TENSIONDECOURTCIRCUIT","Tension de court circuit (%)","","Equipment")
-ass_attrib[nrow(ass_attrib)+1,] <- c("MASSETOTALE","Masse totale (t)","","Equipment")
-ass_attrib[nrow(ass_attrib)+1,] <- c("MASSEHUILE","Masse huile (t)","","Equipment")
-ass_attrib[nrow(ass_attrib)+1,] <- c("PERTESENCHARGE","Pertes en charge (W)","","Equipment")
-ass_attrib[nrow(ass_attrib)+1,] <- c("PERTESAVIDE","Pertes à vide (W)","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("COURANTNOMINALBT","Courant nominal BT","A","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TENSIONDECOURTCIRCUIT","Tension de court circuit","%","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("MASSETOTALE","Masse totale","t","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("MASSEHUILE","Masse huile","t","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("PERTESENCHARGE","Pertes en charge","W","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("PERTESAVIDE","Pertes à vide","W","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("TEMP.ALARME","Temp. alarme","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("TEMP.DECLENCHEMENT","Temp. déclenchement","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("NOSAP","N°SAP","","Equipment")
@@ -1124,7 +1128,19 @@ ass_attrib[nrow(ass_attrib)+1,] <- c("MODELECOMPTEUR","Modèle compteur","","Equ
 ass_attrib[nrow(ass_attrib)+1,] <- c("REVLEVECOMPTEUR","Relevé compteur","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("TYPECOMPTEUR","Type Compteur","","Equipment")
 ass_attrib[nrow(ass_attrib)+1,] <- c("VERSIONFIRMWARE","Version firmware","","Equipment")
-
+ass_attrib[nrow(ass_attrib)+1,] <- c("TYPEMOTEUR","Type moteur","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("PUISSANCEKVA","Puissance","kVA","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("COSPHI","Cos phi","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("CAPATESTEE","Capacité testée","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("CAPAMAXDISPO","Capacité maximale disponible","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("NBBATDEMA","Nb batteries démarrage","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("NBBATCMD","Nb batteries commande","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TYPEBATDEMA","Type batterie démarrage","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("TYPEBATCMD","Type batterie commande","","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("VOLUME","Volume","m3","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("PRESSIONMAX","Pression max.","bar","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("PUISSANCENOMIMAX","Puissance nominale max","kW","Equipment")
+ass_attrib[nrow(ass_attrib)+1,] <- c("PRESSIONCONTROLE","Pression de contrôle","bar","Equipment")
 
 write_archibus(ass_attrib, "./02.asset_attrib.xlsx",
                table.header = "Asset Attribute Standards",
@@ -1625,11 +1641,11 @@ eq_ass_attribut_diametreraccordement <- ven_equip_valide %>%
 #            "asset_attribute_std" = "FREQUENCE",
 #            value = `Fréquence`) 
 
-eq_ass_attribut_levag_modele <- levag_equip_valide %>% 
-  filter (`Modèle` != "") %>% 
-  transmute("#eq_asset_attribute.eq_id" = eq_id,
-            "asset_attribute_std" = "MODELE",
-            value = `Modèle`) 
+#eq_ass_attribut_levag_modele <- levag_equip_valide %>% 
+#  filter (`Modèle` != "") %>% 
+#  transmute("#eq_asset_attribute.eq_id" = eq_id,
+#            "asset_attribute_std" = "MODELE",
+#            value = `Modèle`) 
 
 #eq_ass_attribut_levag_lieu <- cha_equip0 %>%
 #  filter (Lieu != "") %>%
@@ -2382,6 +2398,101 @@ eq_ass_attribut_enregie_versionfirmware <- energie %>%
             "asset_attribute_std" = "VERSIONFIRMWARE",
             value = `Version firmware`)
 
+####### UTIL1
+
+eq_ass_attribut_util_type_moteur <- util1 %>%
+  filter ( `Type moteur` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = `eq_id`,
+            "asset_attribute_std" = "TYPEMOTEUR",
+            value = `Type moteur`)
+
+eq_ass_attribut_util_puissancekva <- util1 %>%
+  filter ( `Puissance (kVA)` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = `eq_id`,
+            "asset_attribute_std" = "PUISSANCEKVA",
+            value = `Puissance (kVA)`)
+
+eq_ass_attribut_util_cosphi <- util1 %>%
+  filter ( `Cos phi` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = `eq_id`,
+            "asset_attribute_std" = "COSPHI",
+            value = `Cos phi`)
+
+
+eq_ass_attribut_util_capatest <- util1 %>%
+  filter ( `Capacité testée` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = `eq_id`,
+            "asset_attribute_std" = "CAPATESTEE",
+            value = `Capacité testée`)
+
+eq_ass_attribut_util_capamax <- util1 %>%
+  filter ( `Capacité maximale disponible` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = `eq_id`,
+            "asset_attribute_std" = "CAPAMAXDISPO",
+            value = `Capacité maximale disponible`)
+
+eq_ass_attribut_util_puissance <- util1 %>%
+  filter ( `Puissance (kW)` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = `eq_id`,
+            "asset_attribute_std" = "PUISSANCE",
+            value = `Puissance (kW)`)
+
+eq_ass_attribut_util_nbbatdema <- util1 %>%
+  filter ( `Nb batteries démarrage` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = `eq_id`,
+            "asset_attribute_std" = "NBBATDEMA",
+            value = `Nb batteries démarrage`)
+
+eq_ass_attribut_util_nbbatcmd <- util1 %>%
+  filter ( `Nb batteries commande` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = `eq_id`,
+            "asset_attribute_std" = "NBBATCMD",
+            value = `Nb batteries commande`)
+
+eq_ass_attribut_util_typebatdema <- util1 %>%
+  filter ( `Type batterie démarrage` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = `eq_id`,
+            "asset_attribute_std" = "TYPEBATDEMA",
+            value = `Type batterie démarrage`)
+
+eq_ass_attribut_util_typebatcmd <- util1 %>%
+  filter ( `Type batterie commande` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = `eq_id`,
+            "asset_attribute_std" = "TYPEBATCMD",
+            value = `Type batterie commande`)
+
+eq_ass_attribut_util_volume <- util1 %>%
+  filter ( `Volume (m3)` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = `eq_id`,
+            "asset_attribute_std" = "VOLUME",
+            value = `Volume (m3)`)
+
+
+######## UTIL2
+eq_ass_attribut_util_pressionmax <- util2 %>%
+  filter ( `Pression max. (bar)` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = `eq_id`,
+            "asset_attribute_std" = "PRESSIONMAX",
+            value = `Pression max. (bar)`)
+
+eq_ass_attribut_util_puisancenomimax <- util2 %>%
+  filter ( `Puissance nominale max (kW)` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = `eq_id`,
+            "asset_attribute_std" = "PUISSANCENOMIMAX",
+            value = `Puissance nominale max (kW)`)
+
+eq_ass_attribut_util_masse <- util2 %>%
+  filter ( `Masse totale (t)` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = `eq_id`,
+            "asset_attribute_std" = "MASSETOTALE",
+            value = `Masse totale (t)`)
+
+##### UTIL3
+eq_ass_attribut_util_pressioncontrole <- util3 %>%
+  filter ( `Pression de contrôle (bar)` != "") %>%
+  transmute("#eq_asset_attribute.eq_id" = `eq_id`,
+            "asset_attribute_std" = "PRESSIONCONTROLE",
+            value = `Pression de contrôle (bar)`)
 
 
 ####
@@ -2589,7 +2700,22 @@ eq_ass_attribut_enregie_relevecompteur,
 eq_ass_attribut_enregie_typecompteur,
 eq_ass_attribut_enregie_versionfirmware,
 eq_ass_attribut_tcvs_installation,
-eq_ass_attribut_tcvs_lieu
+eq_ass_attribut_tcvs_lieu,
+eq_ass_attribut_util_type_moteur,
+eq_ass_attribut_util_puissancekva,
+eq_ass_attribut_util_cosphi,
+eq_ass_attribut_util_capatest,
+eq_ass_attribut_util_capamax,
+eq_ass_attribut_util_puissance,
+eq_ass_attribut_util_nbbatdema,
+eq_ass_attribut_util_nbbatcmd,
+eq_ass_attribut_util_typebatdema,
+eq_ass_attribut_util_typebatcmd,
+eq_ass_attribut_util_volume,
+eq_ass_attribut_util_pressionmax,
+eq_ass_attribut_util_puisancenomimax,
+eq_ass_attribut_util_masse,
+eq_ass_attribut_util_pressioncontrole
 #eq_ass_attribut_mt_document
                           )
 
