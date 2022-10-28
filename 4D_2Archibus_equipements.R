@@ -4,14 +4,14 @@ library(dplyr)
 library("data.table")
 #library(sqldf)
 
-ID_file = "./2022-07-01 - Liste Equipements Cristal Test.xlsx"
+ID_file = "./eq.xlsx"
 Domaine_file = "./Données de référence.xlsx"
 Equi_grpeA_file = "./Equipements_gpeA_final_v3.xlsx"
 Equi_grpeB_file = "./Equipements_gpeB_v6.xlsx"
 Equi_grpeC_file = "./Import_equipmt_22-05-23_v5.xlsx"
-Venti_file = "./VEN_Installations_23.09.2022.csv"
-Venti_Acc_file = "./VEN_Accessoires_23.09.2022.csv"
-Elec_file  = "./ELE_Installations_23.09.2022.csv"
+Venti_file = "./VEN_Installations_28.10.2022.csv"
+Venti_Acc_file = "./VEN_Accessoires_28.10.2022.csv"
+Elec_file  = "./ELE_Installations_28.10.2022.csv"
 Mt_file = "./UTILI_Cellules MT_v04.xlsx"
 Utils_file = "./UTILI_GE_air_chaleur_v02.xlsx"
 FacSV_file = "./Liste_équipement_à_importer.xlsx"
@@ -20,7 +20,7 @@ FacSV_file = "./Liste_équipement_à_importer.xlsx"
 ELA_Ascenseurs_file = "./LEVAG_ascenseurs_22-05-10.xlsx"
 #SV_file = "./Maintenance _Equipements_INFRA_SV_4D.xlsx"
 Energie_file = "./ENERGIE_compteurs_v4.xlsx"
-TCVS_file = "./TCVS_Installations_23.09.2022.xlsx"
+TCVS_file = "./TCVS_Installations_28.10.2022.xlsx"
 TCVS_Detail_file = "./Import_TCVS_22-08-19.xlsx"
 
 A1 <- function(row, col) {
@@ -111,10 +111,11 @@ write_archibus(standards_equip, "./00.eqstd.xlsx",
 
 site_import <- read_excel("./Export Bâtiments.xlsx")
 
-id_archibus <- read_excel(ID_file, range = cell_cols("A:B"))
+id_archibus <- read_excel(ID_file,"Sheet1", col_names = TRUE, col_types = NULL, na = "", skip = 1) %>%
+  transmute("eq_id" = `#eq.eq_id`,
+            "asset_id" = asset_id)
 
-
-batiments_import <- read_excel("./22 - 2022-09-20-rm.xlsx","Sheet1",col_names = TRUE, col_types = NULL, na = "", skip = 1) %>%
+batiments_import <- read_excel("./rm.xlsx","Sheet1",col_names = TRUE, col_types = NULL, na = "", skip = 1) %>%
   left_join(site_import, by=c("#rm.bl_id"="Building Code"))
 
 ##################################
@@ -533,7 +534,7 @@ ele_equip_elect2 <- elect2 %>%
             modelno = `Modèle`,
             subcomponent_of = parent_eq_id,
             mfr = `Fournisseur`,
-            asset_id = `ID Fiche`,
+            asset_id = ID_Fiche_UUID,
             status = 'in',
             condition = "fair",
             comments = Remarques,
@@ -746,7 +747,7 @@ util4_equip <- util4 %>%
             modelno = `Modèle`,
             subcomponent_of = "",
             mfr = "",
-            asset_id = `ID Fiche`,
+            asset_id = `ID_Fiche_UUID`,
             status = toArchibusStatus(`HS?`),
             condition = "fair",
             comments = Remarques,
@@ -2499,13 +2500,13 @@ eq_ass_attribut_util_pressioncontrole <- util3 %>%
 # TCVS
 ####
 
-eq_ass_attribut_tcvs_installation <- tcvs_detail %>%
+eq_ass_attribut_tcvs_installation <- tcvs %>%
   filter ( `Installation` != "") %>%
   transmute("#eq_asset_attribute.eq_id" = eq_id,
             "asset_attribute_std" = "INSTALLATION",
             value = `Installation`)
 
-eq_ass_attribut_tcvs_lieu <- tcvs_detail %>%
+eq_ass_attribut_tcvs_lieu <- tcvs %>%
   filter ( `Lieu` != "") %>%
   transmute("#eq_asset_attribute.eq_id" = eq_id,
             "asset_attribute_std" = "LIEU",
