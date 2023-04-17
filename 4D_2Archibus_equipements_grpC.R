@@ -7,12 +7,12 @@ library("stringr")
 options(scipen = 999)   
 #setwd("/Users/venries/GitHub/Cristal")
 
-Equi_grpeC_CHA_file = "./CHA_eq_v1.xlsx"
-Equi_grpeC_SAN_file = "./SAN_FRI_CHA_eq_v1.xlsx"
-Equi_CHA_installation_file = "./CHA_Installations_11.01.2023.csv"
-Equi_CHA_accesoires_file = "./CHA_Accessoires_11.01.2023.csv"
-Equi_SAN_installation_file = "./SAN_Installations_02.03.2023.csv"
-Equi_SAN_accesoires_file = "./SAN_Accessoires_11.01.2023.csv"
+Equi_grpeC_CHA_file = "./CHA_eq_v2.xlsx"
+Equi_grpeC_SAN_file = "./SAN_FRI_CHA_eq_v3.xlsx"
+Equi_CHA_installation_file = "./CHA_Installations_12.04.2023.csv"
+Equi_CHA_accesoires_file = "./CHA_Accessoires_12.04.2023.csv"
+Equi_SAN_installation_file = "./SAN_Installations_12.04.2023.csv"
+Equi_SAN_accesoires_file = "./SAN_Accessoires_12.04.2023.csv"
 Domaine_file = "./Données de référence.xlsx"
 ID_grpeC_file = "./ID_grp_C.xlsx"
 
@@ -122,7 +122,7 @@ cha_C_equip0 <- read_excel(Equi_grpeC_CHA_file, "Feuil1",col_names = TRUE, col_t
   mutate(`ID_Fiche_UUID` = ifelse(is.na(UUID),`ID Fiche`,paste(`ID Fiche`,`UUID`,sep = " "))) %>%
   left_join(id_grp_C,by=c("ID_Fiche_UUID" = "ID_Fiche_UUID"))
 cha_C_equip0 <- cha_C_equip0 %>%
-  mutate(eq_id = ifelse(is.na(eq_id),paste("CHAUF-00000-",formatC(seq.int(nrow(cha_C_equip0)) + 110000, width=6, flag=0, format="d"),sep = ""),eq_id))
+  mutate(eq_id = ifelse(is.na(eq_id),paste("CHAUF-00000-",formatC(seq.int(nrow(cha_C_equip0)) + 210000, width=6, flag=0, format="d"),sep = ""),eq_id))
 
 
 export_ID_cha <- cha_C_equip0 %>%
@@ -190,7 +190,7 @@ cha_C_enfant <- cha_C_equip0 %>%
             subcomponent_of = `eq_id.parent`,
             mfr = Marque,
             asset_id = paste(`ID Fiche`,`UUID`, sep =" "),
-            status = "out",
+            status = "in",
             modelno = "",
             condition = "fair",
             comments = Remarques,
@@ -214,7 +214,7 @@ san_C_equip0 <- read_excel(Equi_grpeC_SAN_file, "Feuil1",col_names = TRUE, col_t
   mutate(`ID_Fiche_UUID` = ifelse(is.na(UUID),`ID Fiche`,paste(`ID Fiche`,`UUID`,sep = " "))) %>%
   left_join(id_grp_C,by=c("ID_Fiche_UUID" = "ID_Fiche_UUID"))
 san_C_equip0 <- san_C_equip0 %>%
-  mutate(eq_id = ifelse(is.na(eq_id),paste(toTypeDomaine(`Domaine technique`),"-00000-",formatC(seq.int(nrow(san_C_equip0)) + 100000, width=6, flag=0, format="d"),sep = ""),eq_id))
+  mutate(eq_id = ifelse(is.na(eq_id),paste(toTypeDomaine(`Domaine technique`),"-00000-",formatC(seq.int(nrow(san_C_equip0)) + 200000, width=6, flag=0, format="d"),sep = ""),eq_id))
 
 
 export_ID_san <- san_C_equip0 %>%
@@ -257,10 +257,10 @@ san_C_fusion <- san_C0_sous_equip_fusion %>%
             dp_id = "0047",
             num_serial = "",
             subcomponent_of = "",
-            mfr = paste(`Marques`,`Eau marque`, `Fournisseur`, sep =""),
+            mfr = Marque,
             asset_id = paste(`ID Fiche`,`UUID`, sep =" "),
             status = toArchibusStatus(`HS?`),
-            modelno = paste(`Type`,`Type2`, `IF Type installation`,`Boiler Type`,  sep="") ,
+            modelno = Type,
             condition = "fair",
             comments = paste(ifelse(is.na(Remarques.install),`Remarques`,paste(`Remarques.install`,`Remarques`,sep = " "))), 
             date_installed = `Mise en service`) %>%
